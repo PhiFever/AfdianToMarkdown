@@ -9,9 +9,6 @@ import (
 	"time"
 )
 
-// DebugMode 用于控制是否开启无头浏览器的调试模式
-var DebugMode = "1"
-
 const (
 	DelayMs = 330
 	Host    = `https://afdian.net/`

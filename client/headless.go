@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+// DebugMode 用于控制是否开启无头浏览器的调试模式
+var DebugMode = "0"
+
 const ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36`
 
 // Cookie 以下是使用chromedp的相关代码
@@ -100,7 +103,6 @@ func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc
 }
 
 // GetScrolledRenderedPage 获取需要整个页面滚动到底部后经过JavaScript渲染的页面
-// FIXME:也许应该加个chromedp.WaitVisible(scrollSelector, chromedp.ByQuery),，等待页面加载完毕
 func GetScrolledRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
 	log.Println("正在渲染页面:", url)
 
@@ -125,7 +127,7 @@ func GetScrolledRenderedPage(ctx context.Context, cookieParams []*network.Cookie
 				}
 
 				// 等待一段时间，以便页面加载
-				time.Sleep(2 * time.Second)
+				time.Sleep(1 * time.Second)
 
 				// 再次获取滚动高度以判断是否到底
 				err = chromedp.Evaluate(`document.body.scrollHeight`, &currentScrollHeight).Do(ctx)

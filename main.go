@@ -22,8 +22,8 @@ func main() {
 	app := &cli.App{
 		Name:      "AifadianCrawler",
 		Usage:     "爱发电下载器，支持按作者或按作品集爬取数据\nGithub Link:",
-		UsageText: "eg:\n	./ComicCrawler -au Jay \neg:\n\t./ComicCrawler.exe -al aaassssddd \neg:\n	./ComicCrawler.exe -l gallery_list.txt",
-		Version:   "0.9.0",
+		UsageText: "eg:\n	./AifadianCrawler -au Jay \neg:\n\t./AifadianCrawler.exe -al aaassssddd \neg:\n	./AifadianCrawler.exe -l album_list.txt",
+		Version:   "0.5.0",
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorName, Value: "", Usage: "待下载的作者名"},
 			&cli.StringFlag{Name: "album", Aliases: []string{"al"}, Destination: &albumId, Value: "", Usage: "待下载的作品集id"},
