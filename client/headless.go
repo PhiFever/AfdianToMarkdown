@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// DebugMode 用于控制是否开启无头浏览器的调试模式
+// DebugMode 为1时开启无头浏览器的调试模式
 var DebugMode = "0"
 
 const ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36`

@@ -15,7 +15,10 @@ import (
 	"time"
 )
 
-const cachePath = "articleUrlListCache.json"
+const (
+	cachePath = "articleUrlListCache.json"
+	authorDir = "author"
+)
 
 type authorArticle struct {
 	ArticleName string `json:"articleName"`
@@ -26,7 +29,7 @@ type authorArticle struct {
 func GetAuthorArticles(authorName string) error {
 	authorHost, _ := url.JoinPath(client.Host, "a", authorName)
 	//创建作者文件夹
-	os.MkdirAll(path.Join(authorName, utils.ImgDir), os.ModePerm)
+	os.MkdirAll(path.Join(authorName, authorDir), os.ModePerm)
 	log.Println("authorHost:", authorHost)
 
 	cookies := client.ReadCookiesFromFile(utils.CookiePath)
@@ -34,15 +37,17 @@ func GetAuthorArticles(authorName string) error {
 	pageCtx, pageCancel := client.InitChromedpContext(false)
 	defer pageCancel()
 
-	cacheInfo, err := os.Stat(path.Join(authorName, cachePath))
 	var articleUrlList []authorArticle
-	//TODO:增量更新
+	cacheInfo, err := os.Stat(path.Join(authorName, authorDir, cachePath))
 	//获取作者作品列表
 	if !errors.Is(err, os.ErrNotExist) || cacheInfo.ModTime().Before(time.Now().AddDate(0, 0, -1)) {
 		//如果已经有了articleUrlList.json文件，则直接读取
-		file, _ := os.Open(path.Join(authorName, cachePath))
+		file, _ := os.Open(path.Join(authorName, authorDir, cachePath))
 		defer file.Close()
-		json.NewDecoder(file).Decode(&articleUrlList)
+		err := json.NewDecoder(file).Decode(&articleUrlList)
+		if err != nil {
+			return err
+		}
 	} else {
 		pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, authorHost))
 		//fmt.Println(pageDoc)
@@ -58,18 +63,24 @@ func GetAuthorArticles(authorName string) error {
 	}
 	//log.Println("articleUrlList:", utils.ToJSON(articleUrlList))
 
-	////两种可能的情况：1. 进去后需要点击“展开” 2. 直接完全展示
+	converter := md.NewConverter("", true, nil)
 	for i, article := range articleUrlList {
-		articleDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, article.ArticleUrl))
-		articleContent := getArticleContent(articleDoc)
-		//log.Println("articleContent:", articleContent)
 		//覆盖保存到文件
-		//file, _ := os.Create(path.Join(authorName, article.ArticleName+".md"))
-		//file.WriteString(articleContent)
-		//file.Close()
-		err := os.WriteFile(path.Join(authorName, cast.ToString(len(articleUrlList)-i)+"_"+article.ArticleName+".md"), []byte(articleContent), os.ModePerm)
-		if err != nil {
-			return err
+		fileName := path.Join(authorName, authorDir, cast.ToString(len(articleUrlList)-i)+"_"+article.ArticleName+".md")
+		log.Println("fileName:", fileName)
+		_, err := os.Stat(path.Join(authorName, authorDir, cachePath))
+		//如果文件不存在，则下载
+		if errors.Is(err, os.ErrNotExist) {
+			articleDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, article.ArticleUrl))
+			articleContent := getArticleContent(articleDoc, converter)
+			//log.Println("articleContent:", articleContent)
+			err := os.WriteFile(fileName, []byte(articleContent), os.ModePerm)
+			if err != nil {
+				return err
+			}
+		} else {
+			log.Println(fileName, "已存在，跳过下载")
+			continue
 		}
 		//break
 	}
@@ -92,10 +103,10 @@ func getAuthorArticleUrlList(doc *goquery.Document) []authorArticle {
 }
 
 // getArticleContent 获取文章正文内容
-func getArticleContent(doc *goquery.Document) string {
+func getArticleContent(doc *goquery.Document, converter *md.Converter) string {
 	//获取文章内容
 	var htmlContent string
-	converter := md.NewConverter("", true, nil)
+
 	//#app > div.wrapper.app-view > div > section.page-content-w100 > div > div.content-left.max-width-640 > div > div.feed-content.mt16.post-page.unlock > article
 	contentSelector := "div.feed-content.mt16.post-page.unlock > article"
 	//TODO:选取默认展开的评论
