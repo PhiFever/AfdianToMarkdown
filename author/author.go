@@ -4,7 +4,6 @@ import (
 	"AifadianCrawler/client"
 	"AifadianCrawler/utils"
 	"encoding/json"
-	"errors"
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/spf13/cast"
@@ -38,9 +37,9 @@ func GetAuthorArticles(authorName string) error {
 	defer pageCancel()
 
 	var articleUrlList []authorArticle
-	cacheInfo, err := os.Stat(path.Join(authorName, authorDir, cachePath))
+	cacheInfo, cacheExists := utils.FileExists(path.Join(authorName, authorDir, cachePath))
 	//获取作者作品列表
-	if !errors.Is(err, os.ErrNotExist) || cacheInfo.ModTime().Before(time.Now().AddDate(0, 0, -1)) {
+	if cacheExists && cacheInfo.ModTime().Before(time.Now().AddDate(0, 0, -1)) {
 		//如果已经有了articleUrlList.json文件，则直接读取
 		file, _ := os.Open(path.Join(authorName, authorDir, cachePath))
 		defer file.Close()
@@ -67,10 +66,10 @@ func GetAuthorArticles(authorName string) error {
 	for i, article := range articleUrlList {
 		//覆盖保存到文件
 		fileName := path.Join(authorName, authorDir, cast.ToString(len(articleUrlList)-i)+"_"+article.ArticleName+".md")
-		log.Println("fileName:", fileName)
-		_, err := os.Stat(path.Join(authorName, authorDir, cachePath))
+		log.Println("Saving file:", fileName)
+		_, fileExists := utils.FileExists(path.Join(authorName, authorDir, cachePath))
 		//如果文件不存在，则下载
-		if errors.Is(err, os.ErrNotExist) {
+		if !fileExists {
 			articleDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, article.ArticleUrl))
 			articleContent := getArticleContent(articleDoc, converter)
 			//log.Println("articleContent:", articleContent)
@@ -80,7 +79,6 @@ func GetAuthorArticles(authorName string) error {
 			}
 		} else {
 			log.Println(fileName, "已存在，跳过下载")
-			continue
 		}
 		//break
 	}
@@ -106,7 +104,6 @@ func getAuthorArticleUrlList(doc *goquery.Document) []authorArticle {
 func getArticleContent(doc *goquery.Document, converter *md.Converter) string {
 	//获取文章内容
 	var htmlContent string
-
 	//#app > div.wrapper.app-view > div > section.page-content-w100 > div > div.content-left.max-width-640 > div > div.feed-content.mt16.post-page.unlock > article
 	contentSelector := "div.feed-content.mt16.post-page.unlock > article"
 	//TODO:选取默认展开的评论

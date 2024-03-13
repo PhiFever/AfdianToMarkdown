@@ -84,3 +84,8 @@ func ToJSON(JSONString interface{}) string {
 	}
 	return out.String()
 }
+
+func FileExists(filePath string) (os.FileInfo, bool) {
+	fileInfo, err := os.Stat(filePath)
+	return fileInfo, err == nil || os.IsExist(err)
+}
