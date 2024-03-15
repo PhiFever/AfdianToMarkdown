@@ -11,7 +11,7 @@ import (
 
 const (
 	DelayMs = 330
-	Host    = `https://afdian.net/`
+	Host    = `https://afdian.net`
 )
 
 func TrueRandFloat(min, max float64) float64 {

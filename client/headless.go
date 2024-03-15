@@ -18,7 +18,10 @@ import (
 // DebugMode 为1时开启无头浏览器的调试模式
 var DebugMode = "0"
 
-const ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36`
+const (
+	ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36`
+	ImageEnabled    = false
+)
 
 // Cookie 以下是使用chromedp的相关代码
 // Cookie 从 Chrome 中使用EditThisCookie导出的 Cookies
@@ -78,6 +81,14 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 		}
 	}
 	return cookieParams
+}
+
+func GetCookieString(cookies []Cookie) string {
+	var cookieString string
+	for _, cookie := range cookies {
+		cookieString += cookie.Name + "=" + cookie.Value + ";"
+	}
+	return cookieString
 }
 
 // InitChromedpContext 实际在每次调用时可以派生一个新的超时context，然后在这个新的context中执行任务，可以避免卡住
