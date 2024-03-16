@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	cachePath = "articleUrlListCache.json"
+	cacheFile = "articleUrlListCache.json"
 	authorDir = "author"
 )
 
@@ -34,42 +34,46 @@ func GetAuthorArticles(authorName string) error {
 	pageCtx, pageCancel := client.InitChromedpContext(client.ImageEnabled)
 	defer pageCancel()
 
-	var articleUrlList []client.Article
-	cacheInfo, cacheExists := utils.FileExists(path.Join(authorName, authorDir, cachePath))
+	var articleList []client.Article
+	cachePath := path.Join(authorName, authorDir, cacheFile)
+	fmt.Println("cachePath:", cachePath)
+	cacheInfo, cacheExists := utils.FileExists(cachePath)
 	//获取作者作品列表
 	if cacheExists && cacheInfo.ModTime().Before(time.Now().AddDate(0, 0, -1)) {
 		//如果已经有了articleUrlList.json文件，则直接读取
-		file, _ := os.Open(path.Join(authorName, authorDir, cachePath))
+		file, _ := os.Open(cachePath)
 		defer file.Close()
-		err := json.NewDecoder(file).Decode(&articleUrlList)
+		err := json.NewDecoder(file).Decode(&articleList)
 		if err != nil {
 			return err
 		}
 	} else {
 		pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, authorHost))
 		//fmt.Println(pageDoc)
-		articleUrlList = append(articleUrlList, getAuthorArticleUrlList(pageDoc)...)
+		articleList = append(articleList, getAuthorArticleUrlList(pageDoc)...)
 		//保存到文件
-		jsonData, _ := json.MarshalIndent(articleUrlList, "", "\t")
-		file, _ := os.Create(path.Join(authorName, cachePath))
+		jsonData, _ := json.MarshalIndent(articleList, "", "\t")
+		file, _ := os.Create(cachePath)
 		defer file.Close()
 		_, err := file.Write(jsonData)
 		if err != nil {
 			return err
 		}
 	}
-	//log.Println("articleUrlList:", utils.ToJSON(articleUrlList))
+	//log.Println("articleList:", utils.ToJSON(articleList))
 
 	converter := md.NewConverter("", true, nil)
-	for i, article := range articleUrlList {
+	authToken := client.GetAuthTokenCookieString(cookies)
+	//FIXME: 保存到文件的顺序是倒序的
+	//FIXME:已经存在的文件仍然会下载
+	for i, article := range articleList {
 		//覆盖保存到文件
-		fileName := path.Join(authorName, authorDir, cast.ToString(len(articleUrlList)-i)+"_"+article.ArticleName+".md")
+		fileName := path.Join(authorName, authorDir, cast.ToString(len(articleList)-i-1)+"_"+article.ArticleName+".md")
 		log.Println("Saving file:", fileName)
-		_, fileExists := utils.FileExists(path.Join(authorName, authorDir, cachePath))
+		_, fileExists := utils.FileExists(path.Join(authorName, authorDir, fileName))
 		//如果文件不存在，则下载
 		if !fileExists {
-			articleDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, article.ArticleUrl))
-			articleContent := getArticleContent(articleDoc, converter)
+			articleContent := client.GetArticleContentByInterface(article.ArticleUrl, authToken, converter)
 			//log.Println("articleContent:", articleContent)
 			err := os.WriteFile(fileName, []byte(articleContent), os.ModePerm)
 			if err != nil {
@@ -78,6 +82,7 @@ func GetAuthorArticles(authorName string) error {
 		} else {
 			log.Println(fileName, "已存在，跳过下载")
 		}
+		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 		//break
 	}
 
@@ -141,6 +146,7 @@ func getAuthorArticleUrlListByInterface(userId string) []client.Article {
 	return authorArticleList
 }
 
+// Deprecated: Using getArticleContentByInterface instead
 // getArticleContent 获取文章正文内容
 func getArticleContent(doc *goquery.Document, converter *md.Converter) string {
 	//获取文章内容

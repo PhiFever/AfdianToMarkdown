@@ -3,11 +3,14 @@ package album
 import (
 	"AifadianCrawler/client"
 	"AifadianCrawler/utils"
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/spf13/cast"
 	"log"
 	"net/url"
 	"os"
 	"path"
+	"time"
 )
 
 func GetAlbums(authorName string) error {
@@ -16,15 +19,6 @@ func GetAlbums(authorName string) error {
 	log.Println("albumHost:", albumHost)
 
 	cookies := client.ReadCookiesFromFile(utils.CookiePath)
-
-	// Deprecated: Using getAlbumListByInterface instead
-	//cookiesParam := client.ConvertCookies(cookies)
-	//pageCtx, pageCancel := client.InitChromedpContext(client.ImageEnabled)
-	//defer pageCancel()
-	//
-	//pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, albumHost))
-	//albumList := getAlbumList(pageDoc)
-	//log.Println("albumList:", utils.ToJSON(albumList))
 
 	cookieString := client.GetCookiesString(cookies)
 	//log.Println("cookieString:", cookieString)
@@ -35,6 +29,7 @@ func GetAlbums(authorName string) error {
 	//log.Println("albumList:", utils.ToJSON(albumList))
 
 	authToken := client.GetAuthTokenCookieString(cookies)
+	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
 		//获取作品集的所有文章
 		albumArticleList := client.GetAlbumArticleListByInterface(album.AlbumUrl[25:], authToken)
@@ -46,9 +41,25 @@ func GetAlbums(authorName string) error {
 		}
 
 		//TODO: 下载作品集的所有文章
-		//for _, article := range albumArticleList {
-		//
-		//}
+		for i, article := range albumArticleList {
+			//覆盖保存到文件
+			fileName := path.Join(authorName, album.AlbumName, cast.ToString(i)+"_"+article.ArticleName+".md")
+			log.Println("Saving file:", fileName)
+			_, fileExists := utils.FileExists(path.Join(authorName, album.AlbumName, fileName))
+			//如果文件不存在，则下载
+			if !fileExists {
+				articleContent := client.GetArticleContentByInterface(article.ArticleUrl, authToken, converter)
+				//log.Println("articleContent:", articleContent)
+				err := os.WriteFile(fileName, []byte(articleContent), os.ModePerm)
+				if err != nil {
+					return err
+				}
+			} else {
+				log.Println(fileName, "已存在，跳过下载")
+			}
+			time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
+			//break
+		}
 
 	}
 	return nil

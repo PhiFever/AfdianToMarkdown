@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"github.com/stretchr/testify/assert"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -27,7 +27,7 @@ func TestFileExists(t *testing.T) {
 		{
 			name: "TestFileNotExist",
 			args: args{
-				filePath: "cookies1.json",
+				filePath: "D:\\MyProject\\Golang\\WorkSpace\\AifadianCrawler\\cookies1.json",
 			},
 			want:  nil,
 			want1: false,
@@ -36,12 +36,8 @@ func TestFileExists(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := FileExists(tt.args.filePath)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FileExists() got = %v, want %v", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("FileExists() got1 = %v, want %v", got1, tt.want1)
-			}
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want1, got1)
 		})
 	}
 }

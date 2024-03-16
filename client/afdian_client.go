@@ -1,6 +1,7 @@
 package client
 
 import (
+	"AifadianCrawler/utils"
 	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/tidwall/gjson"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 const (
@@ -120,7 +122,7 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 			//fmt.Println(value.Get("post_id").String())
 			postId := value.Get("post_id").String()
 			postUrl, _ := url.JoinPath(Host, "album", albumId, postId)
-			albumArticleList = append(albumArticleList, Article{ArticleName: value.Get("title").String(), ArticleUrl: postUrl})
+			albumArticleList = append(albumArticleList, Article{ArticleName: utils.ToSafeFilename(value.Get("title").String()), ArticleUrl: postUrl})
 			return true
 		})
 	}
@@ -129,11 +131,17 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 }
 
 // GetArticleContentByInterface 获取文章内容
-func GetArticleContentByInterface(articleUrl string, cookieString string, converter *md.Converter) string {
-	//https://afdian.net/api/post/get-detail?post_id=0c26f170a4ea11eea1de52540025c377&album_id=c2624006a35111eeaebb52540025c377
-	apiUrl := fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=%s", Host, articleUrl[58:], articleUrl[25:57])
-	//log.Println("apiUrl:", apiUrl)
-	bodyText := NewRequestGet(apiUrl, cookieString, articleUrl)
+func GetArticleContentByInterface(articleUrl string, authToken string, converter *md.Converter) string {
+	//在album内的：https://afdian.net/api/post/get-detail?post_id=0c26f170a4ea11eea1de52540025c377&album_id=c2624006a35111eeaebb52540025c377
+	//在album外的：https://afdian.net/api/post/get-detail?post_id=f7c2a612e37711eea52d52540025c377&album_id=
+	var apiUrl string
+	if strings.Contains(articleUrl, "album") {
+		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=%s", Host, articleUrl[58:], articleUrl[25:57])
+	} else {
+		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", Host, articleUrl[21:])
+	}
+	log.Println("apiUrl:", apiUrl)
+	bodyText := NewRequestGet(apiUrl, authToken, articleUrl)
 	//log.Println("bodyText: ", string(bodyText))
 	articleContent := gjson.Get(string(bodyText), "data.post.content").String()
 	//log.Println("articleContent: ", articleContent)
