@@ -6,6 +6,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"log"
 	"net/url"
+	"os"
+	"path"
 )
 
 func GetAlbums(authorName string) error {
@@ -24,13 +26,31 @@ func GetAlbums(authorName string) error {
 	//albumList := getAlbumList(pageDoc)
 	//log.Println("albumList:", utils.ToJSON(albumList))
 
-	cookieString := client.GetCookieString(cookies)
+	cookieString := client.GetCookiesString(cookies)
 	//log.Println("cookieString:", cookieString)
 
 	userId := client.GetAuthorId(authorName, albumHost, cookieString)
 	//log.Println("userId:", userId)
 	albumList := client.GetAlbumListByInterface(userId, albumHost, cookieString)
-	log.Println("albumList:", utils.ToJSON(albumList))
+	//log.Println("albumList:", utils.ToJSON(albumList))
+
+	authToken := client.GetAuthTokenCookieString(cookies)
+	for _, album := range albumList {
+		//获取作品集的所有文章
+		albumArticleList := client.GetAlbumArticleListByInterface(album.AlbumUrl[25:], authToken)
+		log.Println("albumArticleList:", utils.ToJSON(albumArticleList))
+		log.Println(len(albumArticleList))
+
+		if err := os.MkdirAll(path.Join(authorName, album.AlbumName), os.ModePerm); err != nil {
+			return err
+		}
+
+		//TODO: 下载作品集的所有文章
+		//for _, article := range albumArticleList {
+		//
+		//}
+
+	}
 	return nil
 }
 

@@ -83,12 +83,21 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 	return cookieParams
 }
 
-func GetCookieString(cookies []Cookie) string {
+func GetCookiesString(cookies []Cookie) string {
 	var cookieString string
 	for _, cookie := range cookies {
 		cookieString += cookie.Name + "=" + cookie.Value + ";"
 	}
 	return cookieString
+}
+
+func GetAuthTokenCookieString(cookies []Cookie) string {
+	for _, cookie := range cookies {
+		if cookie.Name == "auth_token" {
+			return fmt.Sprintf("auth_token=%s", cookie.Value)
+		}
+	}
+	return ""
 }
 
 // InitChromedpContext 实际在每次调用时可以派生一个新的超时context，然后在这个新的context中执行任务，可以避免卡住

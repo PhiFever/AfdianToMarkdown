@@ -22,11 +22,6 @@ const (
 	authorDir = "author"
 )
 
-type authorArticle struct {
-	ArticleName string `json:"articleName"`
-	ArticleUrl  string `json:"articleUrl"`
-}
-
 // GetAuthorArticles 获取作者的所有作品
 func GetAuthorArticles(authorName string) error {
 	authorHost, _ := url.JoinPath(client.Host, "a", authorName)
@@ -39,7 +34,7 @@ func GetAuthorArticles(authorName string) error {
 	pageCtx, pageCancel := client.InitChromedpContext(client.ImageEnabled)
 	defer pageCancel()
 
-	var articleUrlList []authorArticle
+	var articleUrlList []client.Article
 	cacheInfo, cacheExists := utils.FileExists(path.Join(authorName, authorDir, cachePath))
 	//获取作者作品列表
 	if cacheExists && cacheInfo.ModTime().Before(time.Now().AddDate(0, 0, -1)) {
@@ -90,14 +85,14 @@ func GetAuthorArticles(authorName string) error {
 }
 
 // getAuthorArticleUrlList 获取作者作品列表
-func getAuthorArticleUrlList(doc *goquery.Document) []authorArticle {
-	var authorArticleList []authorArticle
+func getAuthorArticleUrlList(doc *goquery.Document) []client.Article {
+	var authorArticleList []client.Article
 	doc.Find("div.vm-block-feed").Each(func(index int, box *goquery.Selection) {
 		box.Find("div.feed-content.mt16.article.pointer.unlock").Each(func(index int, el *goquery.Selection) {
 			subUrl := el.Find("a").AttrOr("href", "")
 			articleUrl, _ := url.JoinPath(client.Host, subUrl)
 			articleName := utils.ToSafeFilename(el.Find("a").Text())
-			authorArticleList = append(authorArticleList, authorArticle{ArticleName: articleName, ArticleUrl: articleUrl})
+			authorArticleList = append(authorArticleList, client.Article{ArticleName: articleName, ArticleUrl: articleUrl})
 		})
 	})
 	return authorArticleList
@@ -105,10 +100,10 @@ func getAuthorArticleUrlList(doc *goquery.Document) []authorArticle {
 
 // https://afdian.net/api/post/get-list?user_id=3f49234e3e8f11eb8f6152540025c377&type=old&publish_sn=&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=
 // TODO：publish_sn无法获取
-func getAuthorArticleUrlListByInterface(userId string) []authorArticle {
-	var authorArticleList []authorArticle
+func getAuthorArticleUrlListByInterface(userId string) []client.Article {
+	var authorArticleList []client.Article
 
-	client := &http.Client{}
+	reqClient := &http.Client{}
 	req, err := http.NewRequest("GET", "https://afdian.net/api/post/get-list?user_id=3f49234e3e8f11eb8f6152540025c377&type=old&publish_sn=&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", nil)
 	if err != nil {
 		log.Fatal(err)
@@ -132,7 +127,7 @@ func getAuthorArticleUrlListByInterface(userId string) []authorArticle {
 	req.Header.Set("sec-fetch-site", "same-origin")
 	req.Header.Set("sec-gpc", "1")
 	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-	resp, err := client.Do(req)
+	resp, err := reqClient.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
