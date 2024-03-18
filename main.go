@@ -77,7 +77,11 @@ func main() {
 		},
 		Action: func(c *cli.Context) error {
 			//TODO:处理全局参数albumListPath
-			fmt.Println("albumListPath:", albumListPath)
+			if albumListPath != "" {
+				fmt.Println("albumListPath:", albumListPath)
+			} else {
+				return fmt.Errorf("albumListPath=None")
+			}
 			return nil
 		},
 	}

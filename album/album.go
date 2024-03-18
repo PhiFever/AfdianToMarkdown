@@ -33,31 +33,22 @@ func GetAlbums(authorName string) error {
 	for _, album := range albumList {
 		//获取作品集的所有文章
 		albumArticleList := client.GetAlbumArticleListByInterface(album.AlbumUrl[25:], authToken)
-		log.Println("albumArticleList:", utils.ToJSON(albumArticleList))
-		log.Println(len(albumArticleList))
+		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
+
+		//log.Println("albumArticleList:", utils.ToJSON(albumArticleList))
+		//log.Println(len(albumArticleList))
 
 		if err := os.MkdirAll(path.Join(authorName, album.AlbumName), os.ModePerm); err != nil {
 			return err
 		}
 
-		//TODO: 下载作品集的所有文章
 		for i, article := range albumArticleList {
-			//覆盖保存到文件
-			fileName := path.Join(authorName, album.AlbumName, cast.ToString(i)+"_"+article.ArticleName+".md")
-			log.Println("Saving file:", fileName)
-			_, fileExists := utils.FileExists(path.Join(authorName, album.AlbumName, fileName))
-			//如果文件不存在，则下载
-			if !fileExists {
-				articleContent := client.GetArticleContentByInterface(article.ArticleUrl, authToken, converter)
-				//log.Println("articleContent:", articleContent)
-				err := os.WriteFile(fileName, []byte(articleContent), os.ModePerm)
-				if err != nil {
-					return err
-				}
-			} else {
-				log.Println(fileName, "已存在，跳过下载")
+			filePath := path.Join(authorName, album.AlbumName, cast.ToString(i)+"_"+article.ArticleName+".md")
+			log.Println("Saving file:", filePath)
+
+			if err := client.SaveContentIfNotExist(filePath, article.ArticleUrl, authToken, converter); err != nil {
+				return err
 			}
-			time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 			//break
 		}
 

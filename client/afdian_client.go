@@ -9,7 +9,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+	"time"
 )
 
 const (
@@ -152,4 +154,22 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 	}
 	//log.Println(markdown)
 	return markdown
+}
+
+func SaveContentIfNotExist(filePath string, articleUrl string, authToken string, converter *md.Converter) error {
+	_, fileExists := utils.FileExists(filePath)
+	log.Println("fileExists:", fileExists)
+	//如果文件不存在，则下载
+	if !fileExists {
+		articleContent := GetArticleContentByInterface(articleUrl, authToken, converter)
+		//log.Println("articleContent:", articleContent)
+		err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm)
+		if err != nil {
+			return err
+		}
+		time.Sleep(time.Millisecond * time.Duration(DelayMs))
+	} else {
+		log.Println(filePath, "已存在，跳过下载")
+	}
+	return nil
 }

@@ -19,15 +19,15 @@ func TestFileExists(t *testing.T) {
 		{
 			name: "TestFileExists", // Aim to fail
 			args: args{
-				filePath: "D:\\MyProject\\Golang\\WorkSpace\\AifadianCrawler\\cookies.json",
+				filePath: "C:\\SysLog.ini",
 			},
-			want:  nil,
+			want:  nil, // Aim to fail
 			want1: true,
 		},
 		{
 			name: "TestFileNotExist",
 			args: args{
-				filePath: "D:\\MyProject\\Golang\\WorkSpace\\AifadianCrawler\\cookies1.json",
+				filePath: "C:\\1234567890.txt",
 			},
 			want:  nil,
 			want1: false,
