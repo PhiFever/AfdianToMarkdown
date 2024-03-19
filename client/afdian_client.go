@@ -72,13 +72,39 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 }
 
 // GetAuthorId 获取作者的ID
-// refer: https://afdian.net/a/q9adg
+// refer: https://afdian.net/a/xyzName
 func GetAuthorId(authorName string, referer string, cookieString string) string {
 	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", Host, authorName)
 	bodyText := NewRequestGet(apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", bodyText)
-	authorId := gjson.Get(string(bodyText), "data.user.user_id").String()
+	authorId := gjson.GetBytes(bodyText, "data.user.user_id").String()
 	return authorId
+}
+
+// GetAuthorArticleUrlListByInterface 获取作者的文章列表
+// publish_sn获取的逻辑是第一轮请求为空，然后第二轮请求输入上一轮获取到的最后一篇文章的publish_sn，以此类推，直到获取到的publish_sn为空结束
+func GetAuthorArticleUrlListByInterface(userName string, cookieString string, prevPublishSn string) ([]Article, string) {
+	userReferer := fmt.Sprintf("%s/a/%s", Host, userName)
+	userId := GetAuthorId(userName, userReferer, cookieString)
+	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", Host, userId, prevPublishSn)
+	log.Println("apiUrl:", apiUrl)
+	var authorArticleList []Article
+
+	bodyText := NewRequestGet(apiUrl, cookieString, userReferer)
+	//log.Printf("%s\n", bodyText)
+
+	articleListJson := gjson.GetBytes(bodyText, "data.list")
+	articleListJson.ForEach(func(key, value gjson.Result) bool {
+		articleId := value.Get("post_id").String()
+		articleUrl, _ := url.JoinPath(Host, "post", articleId)
+		articleName := value.Get("title").String()
+		authorArticleList = append(authorArticleList, Article{ArticleName: utils.ToSafeFilename(articleName), ArticleUrl: articleUrl})
+		return true
+	})
+
+	publishSn := gjson.GetBytes(bodyText, fmt.Sprintf("data.list.%d.publish_sn", len(authorArticleList)-1)).String()
+	log.Println("publishSn:", publishSn)
+	return authorArticleList, publishSn
 }
 
 // GetAlbumListByInterface 获取作者的作品集列表
@@ -87,7 +113,7 @@ func GetAlbumListByInterface(userId string, referer string, cookieString string)
 	bodyText := NewRequestGet(apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", bodyText)
 	var albumList []Album
-	albumListJson := gjson.Get(string(bodyText), "data.list")
+	albumListJson := gjson.GetBytes(bodyText, "data.list")
 	//fmt.Println(utils.ToJSON(albumListJson))
 	albumListJson.ForEach(func(key, value gjson.Result) bool {
 		//fmt.Println(value.Get("title").String())
@@ -118,7 +144,7 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", Host, albumId, i)
 		bodyText := NewRequestGet(apiUrl, authTokenCookie, referer)
 
-		albumArticleListJson := gjson.Get(string(bodyText), "data.list")
+		albumArticleListJson := gjson.GetBytes(bodyText, "data.list")
 		albumArticleListJson.ForEach(func(key, value gjson.Result) bool {
 			//fmt.Println(value.Get("title").String())
 			//fmt.Println(value.Get("post_id").String())
@@ -145,7 +171,7 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 	log.Println("apiUrl:", apiUrl)
 	bodyText := NewRequestGet(apiUrl, authToken, articleUrl)
 	//log.Println("bodyText: ", string(bodyText))
-	articleContent := gjson.Get(string(bodyText), "data.post.content").String()
+	articleContent := gjson.GetBytes(bodyText, "data.post.content").String()
 	//log.Println("articleContent: ", articleContent)
 
 	markdown, err := converter.ConvertString(articleContent)

@@ -3,16 +3,14 @@ package author
 import (
 	"AifadianCrawler/client"
 	"AifadianCrawler/utils"
-	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/spf13/cast"
-	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"time"
 )
 
 const (
@@ -27,21 +25,28 @@ func GetAuthorArticles(authorName string) error {
 	log.Println("authorHost:", authorHost)
 
 	cookies := client.ReadCookiesFromFile(utils.CookiePath)
-	cookiesParam := client.ConvertCookies(cookies)
-	pageCtx, pageCancel := client.InitChromedpContext(client.ImageEnabled)
-	defer pageCancel()
+	cookieString := client.GetCookiesString(cookies)
 
+	//获取作者作品列表
+	prevPublishSn := ""
 	var articleList []client.Article
-	pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, authorHost))
-	//fmt.Println(pageDoc)
-	articleList = append(articleList, getAuthorArticleUrlList(pageDoc)...)
+	for {
+		//获取作者作品列表
+		subArticleList, publishSn := client.GetAuthorArticleUrlListByInterface(authorName, cookieString, prevPublishSn)
+		articleList = append(articleList, subArticleList...)
+		prevPublishSn = publishSn
+		if publishSn == "" {
+			break
+		}
+		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
+	}
 	//log.Println("articleList:", utils.ToJSON(articleList))
+	//log.Println("articleList length:", len(articleList))
 
 	converter := md.NewConverter("", true, nil)
 	authToken := client.GetAuthTokenCookieString(cookies)
-	//FIXME:已经存在的文件仍然会下载
 	for i, article := range articleList {
-		filePath := path.Join(authorName, authorDir, cast.ToString(len(articleList)-i-1)+"_"+article.ArticleName+".md")
+		filePath := path.Join(authorName, authorDir, cast.ToString(i)+"_"+article.ArticleName+".md")
 		log.Println("Saving file:", filePath)
 		if err := client.SaveContentIfNotExist(filePath, article.ArticleUrl, authToken, converter); err != nil {
 			return err
@@ -52,6 +57,7 @@ func GetAuthorArticles(authorName string) error {
 	return nil
 }
 
+// Deprecated: Using GetAuthorArticleUrlListByInterface instead
 // getAuthorArticleUrlList 获取作者作品列表
 func getAuthorArticleUrlList(doc *goquery.Document) []client.Article {
 	var authorArticleList []client.Article
@@ -66,50 +72,7 @@ func getAuthorArticleUrlList(doc *goquery.Document) []client.Article {
 	return authorArticleList
 }
 
-// https://afdian.net/api/post/get-list?user_id=3f49234e3e8f11eb8f6152540025c377&type=old&publish_sn=&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=
-// TODO：publish_sn无法获取
-func getAuthorArticleUrlListByInterface(userId string) []client.Article {
-	var authorArticleList []client.Article
-
-	reqClient := &http.Client{}
-	req, err := http.NewRequest("GET", "https://afdian.net/api/post/get-list?user_id=3f49234e3e8f11eb8f6152540025c377&type=old&publish_sn=&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("authority", "afdian.net")
-	req.Header.Set("accept", "application/json, text/plain, */*")
-	req.Header.Set("accept-language", "zh-CN,zh;q=0.9,en;q=0.8")
-	req.Header.Set("afd-fe-version", "20220508")
-	req.Header.Set("afd-stat-id", "c78521949a7c11ee8c2452540025c377")
-	req.Header.Set("cache-control", "no-cache")
-	req.Header.Set("cookie", "_ga=GA1.1.1610556398.1702557124; auth_token=a2f5931cb036de871664e0f0df9991ec_20231214203204; _ga_6STWKR7T9E=GS1.1.1710250097.4.0.1710250097.60.0.0")
-	req.Header.Set("dnt", "1")
-	req.Header.Set("locale-lang", "zh-CN")
-	req.Header.Set("pragma", "no-cache")
-	req.Header.Set("referer", "https://afdian.net/a/q9adg")
-	req.Header.Set("sec-ch-ua", `"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"`)
-	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", `"Windows"`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-site", "same-origin")
-	req.Header.Set("sec-gpc", "1")
-	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-	resp, err := reqClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	bodyText, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%s\n", bodyText)
-
-	return authorArticleList
-}
-
-// Deprecated: Using getArticleContentByInterface instead
+// Deprecated: Using GetArticleContentByInterface instead
 // getArticleContent 获取文章正文内容
 func getArticleContent(doc *goquery.Document, converter *md.Converter) string {
 	//获取文章内容
