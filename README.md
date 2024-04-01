@@ -11,7 +11,7 @@
 ### 下载作者主页的所有动态
 
 ```shell
-go run main.go -au "作者id（主页url的最后一部分，如https://afdian.net/a/作者id/）" albums
+go run main.go -au "作者id（主页url的最后一部分，如https://afdian.net/a/作者id/）" motions
 ```
 
 ### 下载作者所有的作品集
@@ -20,7 +20,7 @@ go run main.go -au "作者id（主页url的最后一部分，如https://afdian.n
 go run main.go -au "作者id" albums
 ```
 
-### 下载指定文件中按行分隔的作品集
+### 下载指定文件中按行分隔的作品集（尚未实现）
 
 ```shell
 go run main.go -l "文件路径"

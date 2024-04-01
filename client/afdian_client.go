@@ -4,6 +4,7 @@ import (
 	"AifadianCrawler/utils"
 	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/spf13/cast"
 	"github.com/tidwall/gjson"
 	"io"
 	"log"
@@ -158,7 +159,7 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 	return albumArticleList
 }
 
-// GetArticleContentByInterface 获取文章内容
+// GetArticleContentByInterface 获取文章正文内容
 func GetArticleContentByInterface(articleUrl string, authToken string, converter *md.Converter) string {
 	//在album内的：https://afdian.net/api/post/get-detail?post_id=0c26f170a4ea11eea1de52540025c377&album_id=c2624006a35111eeaebb52540025c377
 	//在album外的：https://afdian.net/api/post/get-detail?post_id=f7c2a612e37711eea52d52540025c377&album_id=
@@ -179,15 +180,65 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 		log.Fatal(err)
 	}
 	//log.Println(markdown)
-	return markdown
+
+	commentString, hotCommentString := GetArticleCommentByInterface(articleUrl, authToken)
+	return fmt.Sprintf("%s\n\n%s\n\n%s", markdown, hotCommentString, commentString)
 }
 
-func SaveContentIfNotExist(filePath string, articleUrl string, authToken string, converter *md.Converter) error {
+// GetArticleCommentByInterface 获取文章评论
+// TODO:根据publish_sn获取全部评论
+// https://afdian.net/api/comment/get-list?post_id=0c26f170a4ea11eea1de52540025c377&publish_sn=17043858550803&type=old&hot=
+func GetArticleCommentByInterface(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
+	//https://afdian.net/api/comment/get-list?post_id=0c26f170a4ea11eea1de52540025c377&publish_sn=&type=old&hot=1
+	postId := ""
+	if strings.Contains(articleUrl, "album") {
+		postId = articleUrl[58:]
+	} else {
+		postId = articleUrl[21:]
+	}
+	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", Host, postId)
+	log.Println("apiUrl:", apiUrl)
+
+	bodyText := NewRequestGet(apiUrl, cookieString, articleUrl)
+	commentJson := gjson.GetBytes(bodyText, "data.list")
+	hotCommentJson := gjson.GetBytes(bodyText, "data.hot_list")
+	if hotCommentJson.Exists() {
+		hotCommentString += "## 热评\n\n" + getCommentString(hotCommentJson)
+	}
+
+	commentString += "## 评论\n\n" + getCommentString(commentJson)
+
+	return commentString, hotCommentString
+}
+
+func getCommentString(commentJson gjson.Result) string {
+	i := 0
+	hotCommentString := ""
+	commentJson.ForEach(func(key, value gjson.Result) bool {
+		nickName := value.Get("user.name").String()
+		publishTimeStamp := cast.ToInt64(value.Get("publish_time").String())
+		publishTime := time.Unix(publishTimeStamp, 0).Format("2006-01-02 15:04:05")
+		content := value.Get("content").String()
+		replyString := ""
+		replyUser := value.Get("reply_user")
+		if replyUser.Exists() {
+			replyUserNickName := replyUser.Get("name").String()
+			replyString = fmt.Sprintf("> 回复 %s: ", replyUserNickName)
+		}
+		hotCommentString += fmt.Sprintf("----\n##### <span>[%d] %s by %s</span>\n%s\n\n%s\n\n", i, publishTime, nickName, replyString, content)
+		fmt.Println(hotCommentString)
+		i++
+		return true
+	})
+	return hotCommentString
+}
+
+func SaveContentIfNotExist(articleName string, filePath string, articleUrl string, authToken string, converter *md.Converter) error {
 	_, fileExists := utils.FileExists(filePath)
 	log.Println("fileExists:", fileExists)
 	//如果文件不存在，则下载
 	if !fileExists {
-		articleContent := GetArticleContentByInterface(articleUrl, authToken, converter)
+		articleContent := "## " + articleName + "\n\n" + GetArticleContentByInterface(articleUrl, authToken, converter)
 		//log.Println("articleContent:", articleContent)
 		err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm)
 		if err != nil {

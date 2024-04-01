@@ -48,7 +48,7 @@ func GetAuthorArticles(authorName string) error {
 	for i, article := range articleList {
 		filePath := path.Join(authorName, authorDir, cast.ToString(i)+"_"+article.ArticleName+".md")
 		log.Println("Saving file:", filePath)
-		if err := client.SaveContentIfNotExist(filePath, article.ArticleUrl, authToken, converter); err != nil {
+		if err := client.SaveContentIfNotExist(article.ArticleName, filePath, article.ArticleUrl, authToken, converter); err != nil {
 			return err
 		}
 		//break

@@ -46,7 +46,7 @@ func GetAlbums(authorName string) error {
 			filePath := path.Join(authorName, album.AlbumName, cast.ToString(i)+"_"+article.ArticleName+".md")
 			log.Println("Saving file:", filePath)
 
-			if err := client.SaveContentIfNotExist(filePath, article.ArticleUrl, authToken, converter); err != nil {
+			if err := client.SaveContentIfNotExist(article.ArticleName, filePath, article.ArticleUrl, authToken, converter); err != nil {
 				return err
 			}
 			//break
