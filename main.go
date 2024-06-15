@@ -1,8 +1,8 @@
 package main
 
 import (
-	"AifadianCrawler/album"
-	"AifadianCrawler/author"
+	"AifadianCrawler/aifadian/album"
+	"AifadianCrawler/aifadian/motion"
 	"AifadianCrawler/utils"
 	"fmt"
 	"github.com/fatih/color"
@@ -56,7 +56,7 @@ func main() {
 				Name:  "motions",
 				Usage: "下载指定作者的所有动态",
 				Action: func(c *cli.Context) error {
-					err := author.GetAuthorArticles(authorName)
+					err := motion.GetAuthorArticles(authorName)
 					if err != nil {
 						return err
 					}

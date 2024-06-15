@@ -1,9 +1,13 @@
-package client
+package aifadian
 
 import (
 	"AifadianCrawler/utils"
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/carlmjohnson/requests"
 	"github.com/spf13/cast"
 	"github.com/tidwall/gjson"
 	"io"
@@ -16,8 +20,9 @@ import (
 )
 
 const (
-	DelayMs = 330
-	Host    = `https://afdian.net`
+	DelayMs         = 330
+	Host            = `https://afdian.net`
+	ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36`
 )
 
 type Album struct {
@@ -30,46 +35,98 @@ type Article struct {
 	ArticleUrl  string `json:"articleUrl"`
 }
 
-func SetAfdianHeader(req *http.Request, cookieString string, referer string) {
-	req.Header.Set("authority", "afdian.net")
-	req.Header.Set("accept", "application/json, text/plain, */*")
-	req.Header.Set("accept-language", "zh-CN,zh;q=0.9,en;q=0.8")
-	req.Header.Set("afd-fe-version", "20220508")
-	req.Header.Set("afd-stat-id", "c78521949a7c11ee8c2452540025c377")
-	req.Header.Set("cache-control", "no-cache")
-	req.Header.Set("cookie", cookieString)
-	req.Header.Set("dnt", "1")
-	req.Header.Set("locale-lang", "zh-CN")
-	req.Header.Set("pragma", "no-cache")
-	req.Header.Set("referer", referer)
-	req.Header.Set("sec-ch-ua", `"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"`)
-	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", `"Windows"`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-site", "same-origin")
-	req.Header.Set("sec-gpc", "1")
-	req.Header.Set("user-agent", ChromeUserAgent)
+// Cookie 以下是使用chromedp的相关代码
+// Cookie 从 Chrome 中使用EditThisCookie导出的 Cookies
+type Cookie struct {
+	Domain     string  `json:"domain"`
+	Expiration float64 `json:"expirationDate"`
+	HostOnly   bool    `json:"hostOnly"`
+	HTTPOnly   bool    `json:"httpOnly"`
+	Name       string  `json:"name"`
+	Path       string  `json:"path"`
+	SameSite   string  `json:"sameSite"`
+	Secure     bool    `json:"secure"`
+	Session    bool    `json:"session"`
+	StoreID    string  `json:"storeId"`
+	Value      string  `json:"value"`
+}
+
+// ReadCookiesFromFile 从文件中读取 Cookies
+func ReadCookiesFromFile(filePath string) []Cookie {
+	var cookies []Cookie
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = json.Unmarshal(data, &cookies)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return cookies
+}
+
+func GetCookiesString(cookies []Cookie) string {
+	var cookieString string
+	for _, cookie := range cookies {
+		cookieString += cookie.Name + "=" + cookie.Value + ";"
+	}
+	return cookieString
+}
+
+func GetAuthTokenCookieString(cookies []Cookie) string {
+	for _, cookie := range cookies {
+		if cookie.Name == "auth_token" {
+			return fmt.Sprintf("auth_token=%s", cookie.Value)
+		}
+	}
+	return ""
+}
+
+func buildAfdianHeaders(cookieString string, referer string) http.Header {
+	return http.Header{
+		"authority":          {"afdian.net"},
+		"accept":             {"accept", "application/json, text/plain, */*"},
+		"accept-language":    {"zh-CN,zh;q=0.9,en;q=0.8"},
+		"afd-fe-version":     {"20220508"},
+		"afd-stat-id":        {"c78521949a7c11ee8c2452540025c377"},
+		"cache-control":      {"no-cache"},
+		"cookie":             {cookieString},
+		"dnt":                {"1"},
+		"locale-lang":        {"zh-CN"},
+		"pragma":             {"no-cache"},
+		"referer":            {referer},
+		"sec-ch-ua":          {`"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"`},
+		"sec-ch-ua-mobile":   {"?0"},
+		"sec-ch-ua-platform": {`"Windows"`},
+		"sec-fetch-dest":     {"empty"},
+		"sec-fetch-mode":     {"cors"},
+		"sec-fetch-site":     {"same-origin"},
+		"sec-gpc":            {"1"},
+		"user-agent":         {ChromeUserAgent},
+	}
 }
 
 // NewRequestGet 发送GET请求
 func NewRequestGet(Url string, cookieString string, referer string) []byte {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", Url, nil)
+	var body bytes.Buffer
+	err := requests.
+		URL(Url).
+		Headers(buildAfdianHeaders(cookieString, referer)).
+		ToBytesBuffer(&body).
+		Fetch(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	SetAfdianHeader(req, cookieString, referer)
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	bodyText, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return bodyText
+	return body.Bytes()
 }
 
 // GetAuthorId 获取作者的ID
@@ -88,7 +145,7 @@ func GetAuthorArticleUrlListByInterface(userName string, cookieString string, pr
 	userReferer := fmt.Sprintf("%s/a/%s", Host, userName)
 	userId := GetAuthorId(userName, userReferer, cookieString)
 	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", Host, userId, prevPublishSn)
-	log.Println("apiUrl:", apiUrl)
+	log.Println("Get publish_sn apiUrl:", apiUrl)
 	var authorArticleList []Article
 
 	bodyText := NewRequestGet(apiUrl, cookieString, userReferer)
@@ -161,15 +218,17 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 
 // GetArticleContentByInterface 获取文章正文内容
 func GetArticleContentByInterface(articleUrl string, authToken string, converter *md.Converter) string {
-	//在album内的：https://afdian.net/api/post/get-detail?post_id=0c26f170a4ea11eea1de52540025c377&album_id=c2624006a35111eeaebb52540025c377
-	//在album外的：https://afdian.net/api/post/get-detail?post_id=f7c2a612e37711eea52d52540025c377&album_id=
+	//在album内的： https://afdian.net/api/post/get-detail?post_id=eab6bfb82a8911ef867452540025c377&album_id=6f4b70763eb511eb957d52540025c377
+	//在album外的： https://afdian.net/api/post/get-detail?post_id=eab6bfb82a8911ef867452540025c377&album_id=
+	log.Println("articleUrl:", articleUrl)
 	var apiUrl string
+	splitUrl := strings.Split(articleUrl, "/")
 	if strings.Contains(articleUrl, "album") {
-		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=%s", Host, articleUrl[58:], articleUrl[25:57])
+		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=%s", Host, splitUrl[len(splitUrl)-1], splitUrl[len(splitUrl)-2])
 	} else {
-		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", Host, articleUrl[21:])
+		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", Host, splitUrl[len(splitUrl)-1])
 	}
-	log.Println("apiUrl:", apiUrl)
+	log.Println("Get article content apiUrl:", apiUrl)
 	bodyText := NewRequestGet(apiUrl, authToken, articleUrl)
 	//log.Println("bodyText: ", string(bodyText))
 	articleContent := gjson.GetBytes(bodyText, "data.post.content").String()
@@ -181,8 +240,7 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 	}
 	//log.Println(markdown)
 
-	commentString, hotCommentString := GetArticleCommentByInterface(articleUrl, authToken)
-	return fmt.Sprintf("%s\n\n%s\n\n%s", markdown, hotCommentString, commentString)
+	return markdown
 }
 
 // GetArticleCommentByInterface 获取文章评论
@@ -190,14 +248,10 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 // https://afdian.net/api/comment/get-list?post_id=0c26f170a4ea11eea1de52540025c377&publish_sn=17043858550803&type=old&hot=
 func GetArticleCommentByInterface(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
 	//https://afdian.net/api/comment/get-list?post_id=0c26f170a4ea11eea1de52540025c377&publish_sn=&type=old&hot=1
-	postId := ""
-	if strings.Contains(articleUrl, "album") {
-		postId = articleUrl[58:]
-	} else {
-		postId = articleUrl[21:]
-	}
+	splitUrl := strings.Split(articleUrl, "/")
+	postId := splitUrl[len(splitUrl)-1]
 	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", Host, postId)
-	log.Println("apiUrl:", apiUrl)
+	log.Println("Get article comment apiUrl:", apiUrl)
 
 	bodyText := NewRequestGet(apiUrl, cookieString, articleUrl)
 	commentJson := gjson.GetBytes(bodyText, "data.list")
@@ -226,7 +280,7 @@ func getCommentString(commentJson gjson.Result) string {
 			replyString = fmt.Sprintf("> 回复 %s: ", replyUserNickName)
 		}
 		hotCommentString += fmt.Sprintf("----\n##### <span>[%d] %s by %s</span>\n%s\n\n%s\n\n", i, publishTime, nickName, replyString, content)
-		fmt.Println(hotCommentString)
+		//fmt.Println(hotCommentString)
 		i++
 		return true
 	})
@@ -238,10 +292,11 @@ func SaveContentIfNotExist(articleName string, filePath string, articleUrl strin
 	log.Println("fileExists:", fileExists)
 	//如果文件不存在，则下载
 	if !fileExists {
-		articleContent := "## " + articleName + "\n\n" + GetArticleContentByInterface(articleUrl, authToken, converter)
+		content := GetArticleContentByInterface(articleUrl, authToken, converter)
+		commentString, hotCommentString := GetArticleCommentByInterface(articleUrl, authToken)
+		articleContent := "## " + articleName + "\n\n### Refer\n\n" + articleUrl + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s", content, hotCommentString, commentString)
 		//log.Println("articleContent:", articleContent)
-		err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm)
-		if err != nil {
+		if err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm); err != nil {
 			return err
 		}
 		time.Sleep(time.Millisecond * time.Duration(DelayMs))
