@@ -4,7 +4,7 @@
 
 ## 准备
 
-使用浏览器插件（如Edit this cookie,cookie master等）获取cookie，将cookie保存到项目根目录的`cookie.json`文件中。
+使用浏览器插件（如Edit this cookie,cookie master等）获取cookie，将cookie保存到项目根目录（即与exe可执行文件同级目录）的`cookie.json`文件中。
 
 ## 使用方法
 
