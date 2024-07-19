@@ -1,8 +1,9 @@
 package main
 
 import (
-	"AifadianCrawler/aifadian/album"
-	"AifadianCrawler/aifadian/motion"
+	"AifadianCrawler/afdian"
+	"AifadianCrawler/afdian/album"
+	"AifadianCrawler/afdian/motion"
 	"AifadianCrawler/utils"
 	"fmt"
 	"github.com/fatih/color"
@@ -12,6 +13,7 @@ import (
 )
 
 var (
+	afdianHost    string
 	authorName    string
 	albumListPath string
 )
@@ -25,9 +27,10 @@ func main() {
 		Name:            "AifadianCrawler",
 		Usage:           "爱发电下载器，支持按作者或按作品集爬取数据\nGithub Link:",
 		UsageText:       "eg:\n	./AifadianCrawler -au Jay motions \neg:\n\t./AifadianCrawler.exe -au Jay albums \neg:\n	./AifadianCrawler.exe -l album_list.txt",
-		Version:         "0.5.0",
+		Version:         "0.2.0",
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.net", Usage: "主站域名，默认为afdian.net，被封可自行更改"},
 			&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorName, Value: "", Usage: "待下载的作者名"},
 			&cli.StringFlag{Name: "list", Aliases: []string{"l"}, Destination: &albumListPath, Value: "", Usage: "待下载的作品集id列表文件，每行一个id。(不能与参数-au同时使用)"},
 		},
@@ -39,6 +42,7 @@ func main() {
 			if authorName == "" && albumListPath == "" {
 				return fmt.Errorf("必须指定 --author 或 --list 参数中的一个")
 			}
+			afdian.Host = fmt.Sprintf("https://%s", afdianHost)
 			// 其他全局预处理任务...
 			return nil
 		},
