@@ -36,7 +36,6 @@ type Article struct {
 	ArticleUrl  string `json:"articleUrl"`
 }
 
-// Cookie 以下是使用chromedp的相关代码
 // Cookie 从 Chrome 中使用EditThisCookie导出的 Cookies
 type Cookie struct {
 	Domain     string  `json:"domain"`
@@ -194,7 +193,7 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 	referer := fmt.Sprintf("%s/album/%s", Host, albumId)
 
 	postCountBodyText := NewRequestGet(postCountApiUrl, authTokenCookie, referer)
-	postCount := gjson.Get(string(postCountBodyText), "data.album.post_count").Int()
+	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
 	//log.Println("postCount:", postCount)
 
 	var albumArticleList []Article
@@ -219,8 +218,8 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 
 // GetArticleContentByInterface 获取文章正文内容
 func GetArticleContentByInterface(articleUrl string, authToken string, converter *md.Converter) string {
-	//在album内的： https://afdian.net/api/post/get-detail?post_id=eab6bfb82a8911ef867452540025c377&album_id=6f4b70763eb511eb957d52540025c377
-	//在album外的： https://afdian.net/api/post/get-detail?post_id=eab6bfb82a8911ef867452540025c377&album_id=
+	//在album内的： https://afdian.net/api/post/get-detail?post_id={post_id}&album_id={album_id}
+	//在album外的： https://afdian.net/api/post/get-detail?post_id={post_id}&album_id=
 	log.Println("articleUrl:", articleUrl)
 	var apiUrl string
 	splitUrl := strings.Split(articleUrl, "/")
@@ -246,9 +245,9 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 
 // GetArticleCommentByInterface 获取文章评论
 // TODO:根据publish_sn获取全部评论
-// https://afdian.net/api/comment/get-list?post_id=0c26f170a4ea11eea1de52540025c377&publish_sn=17043858550803&type=old&hot=
+// https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn={publish_sn}&type=old&hot=
 func GetArticleCommentByInterface(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
-	//https://afdian.net/api/comment/get-list?post_id=0c26f170a4ea11eea1de52540025c377&publish_sn=&type=old&hot=1
+	//https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn=&type=old&hot=1
 	splitUrl := strings.Split(articleUrl, "/")
 	postId := splitUrl[len(splitUrl)-1]
 	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", Host, postId)
@@ -295,7 +294,8 @@ func SaveContentIfNotExist(articleName string, filePath string, articleUrl strin
 	if !fileExists {
 		content := GetArticleContentByInterface(articleUrl, authToken, converter)
 		commentString, hotCommentString := GetArticleCommentByInterface(articleUrl, authToken)
-		articleContent := "## " + articleName + "\n\n### Refer\n\n" + articleUrl + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s", content, hotCommentString, commentString)
+		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
+		articleContent := "## " + articleName + "\n\n### Refer\n\n" + strings.Replace(articleUrl, "post", "p", 1) + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s", content, hotCommentString, commentString)
 		//log.Println("articleContent:", articleContent)
 		if err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm); err != nil {
 			return err

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -88,4 +89,38 @@ func ToJSON(JSONString interface{}) string {
 func FileExists(filePath string) (os.FileInfo, bool) {
 	fileInfo, err := os.Stat(filePath)
 	return fileInfo, err == nil || os.IsExist(err)
+}
+
+// CheckAndListAuthors 通过检查当前目录下是否有二级文件夹 motion 来获取所有的作者名
+// 如果有，则返回所有一级文件夹名
+func CheckAndListAuthors() ([]string, error) {
+	var folders []string
+
+	// 获取当前目录路径
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	//fmt.Println("CurrentDir: ", currentDir)
+
+	// 读取当前目录下的所有文件和文件夹
+	files, err := os.ReadDir(currentDir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		//fmt.Println("file: ", file.Name())
+		if file.IsDir() {
+			// 检查是否存在二级文件夹 motion
+			motionPath := filepath.Join(currentDir, file.Name(), "motions")
+			if _, err := os.Stat(motionPath); err == nil {
+				folders = append(folders, file.Name())
+			}
+		}
+	}
+
+	//fmt.Println("folders: ", folders)
+	return folders, nil
 }

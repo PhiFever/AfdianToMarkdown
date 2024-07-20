@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	authorDir = "motion"
+	authorDir = "motions"
 )
 
-// GetAuthorArticles 获取作者的所有作品
-func GetAuthorArticles(authorName string) error {
+// GetMotions 获取作者的所有作品
+func GetMotions(authorName string) error {
 	authorHost, _ := url.JoinPath(afdian.Host, "a", authorName)
 	//创建作者文件夹
 	os.MkdirAll(path.Join(authorName, authorDir), os.ModePerm)
