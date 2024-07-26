@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
-	github.com/carlmjohnson/requests v0.23.5
+	github.com/carlmjohnson/requests v0.24.1
 	github.com/fatih/color v1.17.0
 	github.com/spf13/cast v1.6.0
 	github.com/stretchr/testify v1.9.0
@@ -24,7 +24,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
-	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

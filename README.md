@@ -6,7 +6,14 @@
 
 ## 准备
 
-使用浏览器插件（如Edit this cookie,cookie master等）导出爱发电cookie为json，将cookie保存到项目根目录（即与exe可执行文件同级目录）的`cookie.json`文件中。
+使用浏览器插件（如[Edit this cookie](https://chromewebstore.google.com/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg),[cookie master](https://chromewebstore.google.com/detail/cookie-master/jahkihogapggenanjnlfdcbgmldngnfl)等）导出爱发电cookie为json，将cookie保存到项目根目录（即与exe可执行文件同级目录）的`cookie.json`文件中。
+以cookie master为例，如下图所示点击`copy`
+
+![image](https://github.com/user-attachments/assets/d27b0f59-95c0-4080-97b9-d544d5424a33)
+
+将复制到的json文本粘贴进与可执行文件同级的`cookies.json`即可。
+
+![image](https://github.com/user-attachments/assets/3c9a4a26-fa94-4c38-a69d-359a536446b1)
 
 注意主站域名可能需要手动指定（默认为afdian.net)
 
