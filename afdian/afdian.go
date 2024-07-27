@@ -36,7 +36,7 @@ type Article struct {
 	ArticleUrl  string `json:"articleUrl"`
 }
 
-// Cookie 从 Chrome 中使用EditThisCookie导出的 Cookies
+// Cookie 从 Chrome 中使用cookie master导出的 Cookies
 type Cookie struct {
 	Domain     string  `json:"domain"`
 	Expiration float64 `json:"expirationDate"`
@@ -104,7 +104,7 @@ func buildAfdianHeaders(cookieString string, referer string) http.Header {
 		"locale-lang":        {"zh-CN"},
 		"pragma":             {"no-cache"},
 		"referer":            {referer},
-		"sec-ch-ua":          {`"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"`},
+		"sec-ch-ua":          {`"Chromium";v="127", "Not(A:Brand";v="99", "Google Chrome";v="127"`},
 		"sec-ch-ua-mobile":   {"?0"},
 		"sec-ch-ua-platform": {`"Windows"`},
 		"sec-fetch-dest":     {"empty"},
@@ -133,9 +133,9 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 // refer: https://afdian.net/a/xyzName
 func GetAuthorId(authorName string, referer string, cookieString string) string {
 	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", Host, authorName)
-	bodyText := NewRequestGet(apiUrl, cookieString, referer)
-	//fmt.Printf("%s\n", bodyText)
-	authorId := gjson.GetBytes(bodyText, "data.user.user_id").String()
+	body := NewRequestGet(apiUrl, cookieString, referer)
+	//fmt.Printf("%s\n", body)
+	authorId := gjson.GetBytes(body, "data.user.user_id").String()
 	return authorId
 }
 
@@ -148,10 +148,10 @@ func GetAuthorArticleUrlListByInterface(userName string, cookieString string, pr
 	log.Println("Get publish_sn apiUrl:", apiUrl)
 	var authorArticleList []Article
 
-	bodyText := NewRequestGet(apiUrl, cookieString, userReferer)
-	//log.Printf("%s\n", bodyText)
+	body := NewRequestGet(apiUrl, cookieString, userReferer)
+	//log.Printf("%s\n", body)
 
-	articleListJson := gjson.GetBytes(bodyText, "data.list")
+	articleListJson := gjson.GetBytes(body, "data.list")
 	articleListJson.ForEach(func(key, value gjson.Result) bool {
 		articleId := value.Get("post_id").String()
 		articleUrl, _ := url.JoinPath(Host, "post", articleId)
@@ -160,7 +160,7 @@ func GetAuthorArticleUrlListByInterface(userName string, cookieString string, pr
 		return true
 	})
 
-	publishSn := gjson.GetBytes(bodyText, fmt.Sprintf("data.list.%d.publish_sn", len(authorArticleList)-1)).String()
+	publishSn := gjson.GetBytes(body, fmt.Sprintf("data.list.%d.publish_sn", len(authorArticleList)-1)).String()
 	log.Println("publishSn:", publishSn)
 	return authorArticleList, publishSn
 }
@@ -168,10 +168,10 @@ func GetAuthorArticleUrlListByInterface(userName string, cookieString string, pr
 // GetAlbumListByInterface 获取作者的作品集列表
 func GetAlbumListByInterface(userId string, referer string, cookieString string) []Album {
 	apiUrl := fmt.Sprintf("%s/api/user/get-album-list?user_id=%s", Host, userId)
-	bodyText := NewRequestGet(apiUrl, cookieString, referer)
-	//fmt.Printf("%s\n", bodyText)
+	body := NewRequestGet(apiUrl, cookieString, referer)
+	//fmt.Printf("%s\n", body)
 	var albumList []Album
-	albumListJson := gjson.GetBytes(bodyText, "data.list")
+	albumListJson := gjson.GetBytes(body, "data.list")
 	//fmt.Println(utils.ToJSON(albumListJson))
 	albumListJson.ForEach(func(key, value gjson.Result) bool {
 		//fmt.Println(value.Get("title").String())
@@ -200,9 +200,9 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 	var i int64
 	for i = 0; i < postCount; i += 10 {
 		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", Host, albumId, i)
-		bodyText := NewRequestGet(apiUrl, authTokenCookie, referer)
+		body := NewRequestGet(apiUrl, authTokenCookie, referer)
 
-		albumArticleListJson := gjson.GetBytes(bodyText, "data.list")
+		albumArticleListJson := gjson.GetBytes(body, "data.list")
 		albumArticleListJson.ForEach(func(key, value gjson.Result) bool {
 			//fmt.Println(value.Get("title").String())
 			//fmt.Println(value.Get("post_id").String())
@@ -229,9 +229,9 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", Host, splitUrl[len(splitUrl)-1])
 	}
 	log.Println("Get article content apiUrl:", apiUrl)
-	bodyText := NewRequestGet(apiUrl, authToken, articleUrl)
-	//log.Println("bodyText: ", string(bodyText))
-	articleContent := gjson.GetBytes(bodyText, "data.post.content").String()
+	body := NewRequestGet(apiUrl, authToken, articleUrl)
+	//log.Println("body: ", string(body))
+	articleContent := gjson.GetBytes(body, "data.post.content").String()
 	//log.Println("articleContent: ", articleContent)
 
 	markdown, err := converter.ConvertString(articleContent)
@@ -253,9 +253,9 @@ func GetArticleCommentByInterface(articleUrl string, cookieString string) (comme
 	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", Host, postId)
 	log.Println("Get article comment apiUrl:", apiUrl)
 
-	bodyText := NewRequestGet(apiUrl, cookieString, articleUrl)
-	commentJson := gjson.GetBytes(bodyText, "data.list")
-	hotCommentJson := gjson.GetBytes(bodyText, "data.hot_list")
+	body := NewRequestGet(apiUrl, cookieString, articleUrl)
+	commentJson := gjson.GetBytes(body, "data.list")
+	hotCommentJson := gjson.GetBytes(body, "data.hot_list")
 	if hotCommentJson.Exists() {
 		hotCommentString += "## 热评\n\n" + getCommentString(hotCommentJson)
 	}

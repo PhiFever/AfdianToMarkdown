@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -30,8 +31,10 @@ func GetAlbums(authorName string) error {
 	authToken := afdian.GetAuthTokenCookieString(cookies)
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
+		log.Println("Find album: ", album.AlbumName)
 		//获取作品集的所有文章
-		albumArticleList := afdian.GetAlbumArticleListByInterface(album.AlbumUrl[25:], authToken)
+		//album.AlbumUrl会类似于 https://afdian.com/album/xyz
+		albumArticleList := afdian.GetAlbumArticleListByInterface(strings.Replace(album.AlbumUrl, "https://afdian.com/album/", "", -1), authToken)
 		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
 
 		//log.Println("albumArticleList:", utils.ToJSON(albumArticleList))
