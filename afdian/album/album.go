@@ -1,8 +1,8 @@
 package album
 
 import (
-	"AifadianCrawler/afdian"
-	"AifadianCrawler/utils"
+	"AfdianToMarkdown/afdian"
+	"AfdianToMarkdown/utils"
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/spf13/cast"
 	"log"

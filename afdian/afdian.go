@@ -1,7 +1,7 @@
 package afdian
 
 import (
-	"AifadianCrawler/utils"
+	"AfdianToMarkdown/utils"
 	"bytes"
 	"context"
 	"encoding/json"

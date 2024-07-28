@@ -1,10 +1,10 @@
 package main
 
 import (
-	"AifadianCrawler/afdian"
-	"AifadianCrawler/afdian/album"
-	"AifadianCrawler/afdian/motion"
-	"AifadianCrawler/utils"
+	"AfdianToMarkdown/afdian"
+	"AfdianToMarkdown/afdian/album"
+	"AfdianToMarkdown/afdian/motion"
+	"AfdianToMarkdown/utils"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
@@ -25,9 +25,9 @@ func main() {
 	//记录开始时间
 	startTime := time.Now()
 	app := &cli.App{
-		Name:            "AifadianCrawler",
-		Usage:           "爱发电下载器，支持按作者或按作品集爬取数据\nGithub Link: https://github.com/PhiFever/AifadianCrawler",
-		UsageText:       "eg:\n	./AifadianCrawler -au Jay motions \neg:\n\t./AifadianCrawler.exe -au Jay albums \neg:\n	./AifadianCrawler.exe -l album_list.txt",
+		Name:            "AfdianToMarkdown",
+		Usage:           "爱发电下载器，支持按作者或按作品集爬取数据\nGithub Link: https://github.com/PhiFever/AfdianToMarkdown",
+		UsageText:       "eg:\n	./AfdianToMarkdown.exe -au Jay motions \neg:\n\t./AfdianToMarkdown.exe -au Jay albums \neg:\n	./AfdianToMarkdown.exe -l album_list.txt",
 		Version:         "0.2.1",
 		HideHelpCommand: true,
 		Flags: []cli.Flag{

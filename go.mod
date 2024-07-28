@@ -1,4 +1,4 @@
-module AifadianCrawler
+module AfdianToMarkdown
 
 go 1.22
 
