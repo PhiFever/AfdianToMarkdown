@@ -20,15 +20,14 @@ func GetAlbums(authorName string) error {
 
 	cookies := afdian.ReadCookiesFromFile(utils.CookiePath)
 
-	cookieString := afdian.GetCookiesString(cookies)
+	authToken := afdian.GetAuthTokenCookieString(cookies)
 	//log.Println("cookieString:", cookieString)
 
-	userId := afdian.GetAuthorId(authorName, albumHost, cookieString)
+	userId := afdian.GetAuthorId(authorName, albumHost, authToken)
 	//log.Println("userId:", userId)
-	albumList := afdian.GetAlbumListByInterface(userId, albumHost, cookieString)
+	albumList := afdian.GetAlbumListByInterface(userId, albumHost, authToken)
 	//log.Println("albumList:", utils.ToJSON(albumList))
 
-	authToken := afdian.GetAuthTokenCookieString(cookies)
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
 		log.Println("Find album: ", album.AlbumName)

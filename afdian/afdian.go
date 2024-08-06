@@ -74,24 +74,15 @@ func ReadCookiesFromFile(filePath string) []Cookie {
 	return cookies
 }
 
-func GetCookiesString(cookies []Cookie) string {
-	var cookieString string
-	for _, cookie := range cookies {
-		cookieString += cookie.Name + "=" + cookie.Value + ";"
-	}
-	return cookieString
-}
-
 func GetAuthTokenCookieString(cookies []Cookie) string {
+	var authToken string
 	for _, cookie := range cookies {
-		if cookie.Name == "auth_token" {
-			return fmt.Sprintf("auth_token=%s", cookie.Value)
-		}
+		authToken += cookie.Name + "=" + cookie.Value + ";"
 	}
-	return ""
+	return authToken
 }
 
-func buildAfdianHeaders(cookieString string, referer string) http.Header {
+func buildAfdianHeaders(authToken string, referer string) http.Header {
 	return http.Header{
 		"authority":          {"afdian.net"},
 		"accept":             {"accept", "application/json, text/plain, */*"},
@@ -99,7 +90,7 @@ func buildAfdianHeaders(cookieString string, referer string) http.Header {
 		"afd-fe-version":     {"20220508"},
 		"afd-stat-id":        {"c78521949a7c11ee8c2452540025c377"},
 		"cache-control":      {"no-cache"},
-		"cookie":             {cookieString},
+		"cookie":             {authToken},
 		"dnt":                {"1"},
 		"locale-lang":        {"zh-CN"},
 		"pragma":             {"no-cache"},
@@ -116,11 +107,11 @@ func buildAfdianHeaders(cookieString string, referer string) http.Header {
 }
 
 // NewRequestGet 发送GET请求
-func NewRequestGet(Url string, cookieString string, referer string) []byte {
+func NewRequestGet(Url string, authToken string, referer string) []byte {
 	var body bytes.Buffer
 	err := requests.
 		URL(Url).
-		Headers(buildAfdianHeaders(cookieString, referer)).
+		Headers(buildAfdianHeaders(authToken, referer)).
 		ToBytesBuffer(&body).
 		Fetch(context.Background())
 	if err != nil {
@@ -131,9 +122,9 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 
 // GetAuthorId 获取作者的ID
 // refer: https://afdian.net/a/xyzName
-func GetAuthorId(authorName string, referer string, cookieString string) string {
+func GetAuthorId(authorName string, referer string, authToken string) string {
 	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", Host, authorName)
-	body := NewRequestGet(apiUrl, cookieString, referer)
+	body := NewRequestGet(apiUrl, authToken, referer)
 	//fmt.Printf("%s\n", body)
 	authorId := gjson.GetBytes(body, "data.user.user_id").String()
 	return authorId
@@ -141,14 +132,14 @@ func GetAuthorId(authorName string, referer string, cookieString string) string 
 
 // GetAuthorArticleUrlListByInterface 获取作者的文章列表
 // publish_sn获取的逻辑是第一轮请求为空，然后第二轮请求输入上一轮获取到的最后一篇文章的publish_sn，以此类推，直到获取到的publish_sn为空结束
-func GetAuthorArticleUrlListByInterface(userName string, cookieString string, prevPublishSn string) ([]Article, string) {
+func GetAuthorArticleUrlListByInterface(userName string, authToken string, prevPublishSn string) ([]Article, string) {
 	userReferer := fmt.Sprintf("%s/a/%s", Host, userName)
-	userId := GetAuthorId(userName, userReferer, cookieString)
+	userId := GetAuthorId(userName, userReferer, authToken)
 	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", Host, userId, prevPublishSn)
 	log.Println("Get publish_sn apiUrl:", apiUrl)
 	var authorArticleList []Article
 
-	body := NewRequestGet(apiUrl, cookieString, userReferer)
+	body := NewRequestGet(apiUrl, authToken, userReferer)
 	//log.Printf("%s\n", body)
 
 	articleListJson := gjson.GetBytes(body, "data.list")
@@ -166,9 +157,9 @@ func GetAuthorArticleUrlListByInterface(userName string, cookieString string, pr
 }
 
 // GetAlbumListByInterface 获取作者的作品集列表
-func GetAlbumListByInterface(userId string, referer string, cookieString string) []Album {
+func GetAlbumListByInterface(userId string, referer string, authToken string) []Album {
 	apiUrl := fmt.Sprintf("%s/api/user/get-album-list?user_id=%s", Host, userId)
-	body := NewRequestGet(apiUrl, cookieString, referer)
+	body := NewRequestGet(apiUrl, authToken, referer)
 	//fmt.Printf("%s\n", body)
 	var albumList []Album
 	albumListJson := gjson.GetBytes(body, "data.list")
@@ -246,14 +237,14 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 // GetArticleCommentByInterface 获取文章评论
 // TODO:根据publish_sn获取全部评论
 // https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn={publish_sn}&type=old&hot=
-func GetArticleCommentByInterface(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
+func GetArticleCommentByInterface(articleUrl string, authToken string) (commentString string, hotCommentString string) {
 	//https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn=&type=old&hot=1
 	splitUrl := strings.Split(articleUrl, "/")
 	postId := splitUrl[len(splitUrl)-1]
 	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", Host, postId)
 	log.Println("Get article comment apiUrl:", apiUrl)
 
-	body := NewRequestGet(apiUrl, cookieString, articleUrl)
+	body := NewRequestGet(apiUrl, authToken, articleUrl)
 	commentJson := gjson.GetBytes(body, "data.list")
 	hotCommentJson := gjson.GetBytes(body, "data.hot_list")
 	if hotCommentJson.Exists() {

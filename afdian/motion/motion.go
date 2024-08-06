@@ -24,14 +24,15 @@ func GetMotions(authorName string) error {
 	log.Println("authorHost:", authorHost)
 
 	cookies := afdian.ReadCookiesFromFile(utils.CookiePath)
-	cookieString := afdian.GetCookiesString(cookies)
+	authToken := afdian.GetAuthTokenCookieString(cookies)
+	log.Println("authToken:", authToken)
 
 	//获取作者作品列表
 	prevPublishSn := ""
 	var articleList []afdian.Article
 	for {
 		//获取作者作品列表
-		subArticleList, publishSn := afdian.GetAuthorArticleUrlListByInterface(authorName, cookieString, prevPublishSn)
+		subArticleList, publishSn := afdian.GetAuthorArticleUrlListByInterface(authorName, authToken, prevPublishSn)
 		articleList = append(articleList, subArticleList...)
 		prevPublishSn = publishSn
 		if publishSn == "" {
@@ -43,7 +44,6 @@ func GetMotions(authorName string) error {
 	log.Println("articleList length:", len(articleList))
 
 	converter := md.NewConverter("", true, nil)
-	authToken := afdian.GetAuthTokenCookieString(cookies)
 	for i, article := range articleList {
 		filePath := path.Join(authorName, authorDir, cast.ToString(i)+"_"+article.ArticleName+".md")
 		log.Println("Saving file:", filePath)
