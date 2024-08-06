@@ -19,7 +19,11 @@ import (
 	"time"
 )
 
-var Host string
+var (
+	Host                  string
+	cookiesString         string
+	authTokenCookieString string
+)
 
 const (
 	DelayMs         = 150
@@ -75,20 +79,23 @@ func ReadCookiesFromFile(filePath string) []Cookie {
 }
 
 func GetCookiesString(cookies []Cookie) string {
-	var cookieString string
-	for _, cookie := range cookies {
-		cookieString += cookie.Name + "=" + cookie.Value + ";"
+	if cookiesString == "" {
+		for _, cookie := range cookies {
+			cookiesString += cookie.Name + "=" + cookie.Value + ";"
+		}
 	}
-	return cookieString
+	return cookiesString
 }
 
 func GetAuthTokenCookieString(cookies []Cookie) string {
-	for _, cookie := range cookies {
-		if cookie.Name == "auth_token" {
-			return fmt.Sprintf("auth_token=%s", cookie.Value)
+	if authTokenCookieString == "" {
+		for _, cookie := range cookies {
+			if cookie.Name == "auth_token" {
+				authTokenCookieString = fmt.Sprintf("auth_token=%s", cookie.Value)
+			}
 		}
 	}
-	return ""
+	return authTokenCookieString
 }
 
 func buildAfdianHeaders(cookieString string, referer string) http.Header {
@@ -130,7 +137,7 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 }
 
 // GetAuthorId 获取作者的ID
-// refer: https://afdian.net/a/xyzName
+// refer: https://afdian.net/a/Alice
 func GetAuthorId(authorName string, referer string, cookieString string) string {
 	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", Host, authorName)
 	body := NewRequestGet(apiUrl, cookieString, referer)
