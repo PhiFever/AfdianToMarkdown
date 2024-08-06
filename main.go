@@ -27,8 +27,8 @@ func main() {
 	app := &cli.App{
 		Name:            "AfdianToMarkdown",
 		Usage:           "爱发电下载器，支持按作者或按作品集爬取数据\nGithub Link: https://github.com/PhiFever/AfdianToMarkdown",
-		UsageText:       "eg:\n	./AfdianToMarkdown.exe -au Jay motions \neg:\n\t./AfdianToMarkdown.exe -au Jay albums \neg:\n	./AfdianToMarkdown.exe -l album_list.txt",
-		Version:         "0.2.1",
+		UsageText:       "eg:\n	AfdianToMarkdown.exe -au Alice motions \neg:\n\tAfdianToMarkdown.exe -au Alice albums \neg:\n\tAfdianToMarkdown.exe -l album_list.txt \neg:\n\tAfdianToMarkdown.exe update",
+		Version:         "0.2.2",
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.net", Usage: "主站域名，默认为afdian.net，被封可自行更改"},
