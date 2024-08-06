@@ -3,13 +3,14 @@ package motion
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/utils"
-	md "github.com/JohannesKaufmann/html-to-markdown"
-	"github.com/spf13/cast"
 	"log"
 	"net/url"
 	"os"
 	"path"
 	"time"
+
+	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -38,7 +39,7 @@ func GetMotions(authorName string) error {
 		if publishSn == "" {
 			break
 		}
-		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
+		time.Sleep(time.Millisecond * time.Duration(30))
 	}
 	log.Println("articleList:", utils.ToJSON(articleList))
 	log.Println("articleList length:", len(articleList))
