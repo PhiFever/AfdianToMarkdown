@@ -86,11 +86,6 @@ func ToJSON(JSONString interface{}) string {
 	return out.String()
 }
 
-func FileExists(filePath string) (os.FileInfo, bool) {
-	fileInfo, err := os.Stat(filePath)
-	return fileInfo, err == nil || os.IsExist(err)
-}
-
 // CheckAndListAuthors 通过检查当前目录下是否有二级文件夹 motion 来获取所有的作者名
 // 如果有，则返回所有一级文件夹名
 func CheckAndListAuthors() ([]string, error) {

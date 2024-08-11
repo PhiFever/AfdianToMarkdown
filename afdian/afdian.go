@@ -146,9 +146,9 @@ func GetAuthorId(authorName string, referer string, cookieString string) string 
 	return authorId
 }
 
-// GetAuthorArticleUrlListByInterface 获取作者的文章列表
+// GetAuthorMotionUrlList 获取作者的文章列表
 // publish_sn获取的逻辑是第一轮请求为空，然后第二轮请求输入上一轮获取到的最后一篇文章的publish_sn，以此类推，直到获取到的publish_sn为空结束
-func GetAuthorArticleUrlListByInterface(userName string, cookieString string, prevPublishSn string) ([]Article, string) {
+func GetAuthorMotionUrlList(userName string, cookieString string, prevPublishSn string) ([]Article, string) {
 	userReferer := fmt.Sprintf("%s/a/%s", Host, userName)
 	userId := GetAuthorId(userName, userReferer, cookieString)
 	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", Host, userId, prevPublishSn)
@@ -172,8 +172,8 @@ func GetAuthorArticleUrlListByInterface(userName string, cookieString string, pr
 	return authorArticleList, publishSn
 }
 
-// GetAlbumListByInterface 获取作者的作品集列表
-func GetAlbumListByInterface(userId string, referer string, cookieString string) []Album {
+// GetAlbumList 获取作者的作品集列表
+func GetAlbumList(userId string, referer string, cookieString string) []Album {
 	apiUrl := fmt.Sprintf("%s/api/user/get-album-list?user_id=%s", Host, userId)
 	body := NewRequestGet(apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", body)
@@ -192,8 +192,8 @@ func GetAlbumListByInterface(userId string, referer string, cookieString string)
 	return albumList
 }
 
-// GetAlbumArticleListByInterface 获取作品集的所有文章
-func GetAlbumArticleListByInterface(albumId string, authToken string) []Article {
+// GetAlbumArticleList 获取作品集的所有文章
+func GetAlbumArticleList(albumId string, authToken string) []Article {
 	//log.Println("albumId:", albumId)
 	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", Host, albumId)
 	authTokenCookie := fmt.Sprintf("auth_token=%s", authToken)
@@ -223,8 +223,8 @@ func GetAlbumArticleListByInterface(albumId string, authToken string) []Article 
 	return albumArticleList
 }
 
-// GetArticleContentByInterface 获取文章正文内容
-func GetArticleContentByInterface(articleUrl string, authToken string, converter *md.Converter) string {
+// GetArticleContent 获取文章正文内容
+func GetArticleContent(articleUrl string, authToken string, converter *md.Converter) string {
 	//在album内的： https://afdian.net/api/post/get-detail?post_id={post_id}&album_id={album_id}
 	//在album外的： https://afdian.net/api/post/get-detail?post_id={post_id}&album_id=
 	log.Println("articleUrl:", articleUrl)
@@ -250,10 +250,10 @@ func GetArticleContentByInterface(articleUrl string, authToken string, converter
 	return markdown
 }
 
-// GetArticleCommentByInterface 获取文章评论
+// GetArticleComment 获取文章评论
 // TODO:根据publish_sn获取全部评论
 // https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn={publish_sn}&type=old&hot=
-func GetArticleCommentByInterface(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
+func GetArticleComment(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
 	//https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn=&type=old&hot=1
 	splitUrl := strings.Split(articleUrl, "/")
 	postId := splitUrl[len(splitUrl)-1]
@@ -295,12 +295,13 @@ func getCommentString(commentJson gjson.Result) string {
 }
 
 func SaveContentIfNotExist(articleName string, filePath string, articleUrl string, authToken string, converter *md.Converter) error {
-	_, fileExists := utils.FileExists(filePath)
+	_, err := os.Stat(filePath)
+	fileExists := err == nil || os.IsExist(err)
 	log.Println("fileExists:", fileExists)
 	//如果文件不存在，则下载
 	if !fileExists {
-		content := GetArticleContentByInterface(articleUrl, authToken, converter)
-		commentString, hotCommentString := GetArticleCommentByInterface(articleUrl, authToken)
+		content := GetArticleContent(articleUrl, authToken, converter)
+		commentString, hotCommentString := GetArticleComment(articleUrl, authToken)
 		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
 		articleContent := "## " + articleName + "\n\n### Refer\n\n" + strings.Replace(articleUrl, "post", "p", 1) + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s", content, hotCommentString, commentString)
 		//log.Println("articleContent:", articleContent)

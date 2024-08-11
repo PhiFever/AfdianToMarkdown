@@ -32,7 +32,7 @@ func GetMotions(authorName string) error {
 	var articleList []afdian.Article
 	for {
 		//获取作者作品列表
-		subArticleList, publishSn := afdian.GetAuthorArticleUrlListByInterface(authorName, cookieString, prevPublishSn)
+		subArticleList, publishSn := afdian.GetAuthorMotionUrlList(authorName, cookieString, prevPublishSn)
 		articleList = append(articleList, subArticleList...)
 		prevPublishSn = publishSn
 		if publishSn == "" {
