@@ -25,6 +25,7 @@ go build
 ```
 
 ### 帮助
+注：--list功能尚未实现
 
 ```
 $ .\AfdianToMarkdown.exe -h
