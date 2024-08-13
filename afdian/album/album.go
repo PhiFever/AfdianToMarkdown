@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"strings"
+	"regexp"
 	"time"
 )
 
@@ -34,7 +34,9 @@ func GetAlbums(authorName string) error {
 		log.Println("Find album: ", album.AlbumName)
 		//获取作品集的所有文章
 		//album.AlbumUrl会类似于 https://afdian.com/album/xyz
-		albumArticleList := afdian.GetAlbumArticleList(strings.Replace(album.AlbumUrl, "https://afdian.com/album/", "", -1), authToken)
+		re := regexp.MustCompile("^.*/album/")
+   		albumId := re.ReplaceAllString(album.AlbumUrl, "")
+		albumArticleList := afdian.GetAlbumArticleList(albumId, authToken)
 		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
 
 		//log.Println("albumArticleList:", utils.ToJSON(albumArticleList))
