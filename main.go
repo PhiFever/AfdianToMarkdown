@@ -28,10 +28,10 @@ func main() {
 		Name:            "AfdianToMarkdown",
 		Usage:           "爱发电下载器，支持按作者或按作品集爬取数据\nGithub Link: https://github.com/PhiFever/AfdianToMarkdown",
 		UsageText:       "eg:\n	AfdianToMarkdown.exe -au Alice motions \neg:\n\tAfdianToMarkdown.exe -au Alice albums \neg:\n\tAfdianToMarkdown.exe -l album_list.txt \neg:\n\tAfdianToMarkdown.exe update",
-		Version:         "0.2.2",
+		Version:         "0.3.0",
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.net", Usage: "主站域名，默认为afdian.net，被封可自行更改"},
+			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.com", Usage: "主站域名，默认为afdian.com，被封可自行更改"},
 			&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorName, Value: "", Usage: "待下载的作者id"},
 			&cli.StringFlag{Name: "list", Aliases: []string{"l"}, Destination: &albumListPath, Value: "", Usage: "待下载的作品集id列表文件，每行一个id。(不能与参数-au同时使用)"},
 		},
@@ -58,14 +58,16 @@ func main() {
 				Name:  "motions",
 				Usage: "下载指定作者的所有动态",
 				Action: func(c *cli.Context) error {
-					return motion.GetMotions(authorName)
+					cookieString, authToken := afdian.GetCookies()
+					return motion.GetMotions(authorName, cookieString, authToken)
 				},
 			},
 			{
 				Name:  "albums",
 				Usage: "下载指定作者的所有作品集",
 				Action: func(c *cli.Context) error {
-					return album.GetAlbums(authorName)
+					cookieString, authToken := afdian.GetCookies()
+					return album.GetAlbums(authorName, cookieString, authToken)
 				},
 			},
 			{
@@ -76,12 +78,13 @@ func main() {
 					if err != nil {
 						return err
 					}
+					cookieString, authToken := afdian.GetCookies()
 					for _, author := range authors {
 						log.Println("find exist author: ", author)
-						if err := motion.GetMotions(author); err != nil {
+						if err := motion.GetMotions(author, cookieString, authToken); err != nil {
 							return err
 						}
-						if err := album.GetAlbums(author); err != nil {
+						if err := album.GetAlbums(author, cookieString, authToken); err != nil {
 							return err
 						}
 					}

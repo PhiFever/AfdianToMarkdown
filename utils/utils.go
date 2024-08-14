@@ -4,16 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
 const (
-	ImgDir     = ".assets"
-	CookiePath = `cookies.json`
+	ImgDir = ".assets"
 )
+
+var CookiePath = path.Join(GetExecutionPath(), `cookies.json`)
 
 // ReadListFile 用于按行读取列表文件，返回一个字符串切片
 func ReadListFile(filePath string) ([]string, error) {
@@ -86,17 +89,13 @@ func ToJSON(JSONString interface{}) string {
 	return out.String()
 }
 
-// CheckAndListAuthors 通过检查当前目录下是否有二级文件夹 motion 来获取所有的作者名
+// CheckAndListAuthors 通过检查程序目录下是否有二级文件夹 motions 来获取所有的作者名
 // 如果有，则返回所有一级文件夹名
 func CheckAndListAuthors() ([]string, error) {
 	var folders []string
 
 	// 获取当前目录路径
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
+	currentDir := GetExecutionPath()
 	//fmt.Println("CurrentDir: ", currentDir)
 
 	// 读取当前目录下的所有文件和文件夹
@@ -118,4 +117,13 @@ func CheckAndListAuthors() ([]string, error) {
 
 	//fmt.Println("folders: ", folders)
 	return folders, nil
+}
+
+// GetExecutionPath 获取程序的实际执行目录
+func GetExecutionPath() string {
+	ex, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return filepath.Dir(ex)
 }

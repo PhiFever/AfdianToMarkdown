@@ -1,6 +1,6 @@
 ## AfdianToMarkdown
 
-爱发电(afdian.net)爬虫，用于下载爱发电作者的动态和作品集并保存为markdown文件（目前只能保存纯文本内容，不支持保存图片）。
+爱发电(afdian.com)爬虫，用于下载爱发电作者的动态和作品集并保存为markdown文件（目前只能保存纯文本内容，不支持保存图片）。
 
 **！！！该软件不能直接帮你免费爬取订阅后才能查看的内容！！！**
 
@@ -14,14 +14,14 @@
 
 ![image](https://github.com/user-attachments/assets/3c9a4a26-fa94-4c38-a69d-359a536446b1)
 
-**注意主站域名可能需要手动指定（默认为afdian.net)**
+**注意主站域名可能需要手动指定（默认为afdian.com)**
 
 ### 构建
 
-本程序在go1.22.1下构建 
+本程序在go1.23.0下构建，如无编译环境，也可到release页面自行下载对应的可执行文件
 
 ```
-go build
+make build
 ```
 
 ### 帮助
@@ -44,7 +44,7 @@ USAGE:
      AfdianToMarkdown.exe update
 
 VERSION:
-   0.2.2
+   0.3.0
 
 COMMANDS:
    motions  下载指定作者的所有动态
@@ -52,7 +52,7 @@ COMMANDS:
    update   更新所有已经下载的作者的动态和作品集
 
 GLOBAL OPTIONS:
-   --host value                主站域名，默认为afdian.net，被封可自行更改 (default: "afdian.net")
+   --host value                主站域名，默认为afdian.com，被封可自行更改 (default: "afdian.com")
    --author value, --au value  待下载的作者id
    --list value, -l value      待下载的作品集id列表文件，每行一个id。(不能与参数-au同时使用)
    --help, -h                  show help
@@ -66,12 +66,12 @@ GLOBAL OPTIONS:
 
 在windows平台上进行调用时，有如下示例
 
-注：下文提到的作者id为作者主页url的最后一部分，如`https://afdian.net/a/作者id/`
+注：下文提到的作者id为作者主页url的最后一部分，如`https://afdian.com/a/作者id/`
 
 #### 下载作者的所有动态
 
 ```shell
-AfdianToMarkdown.exe --host="afdian.com" -au "作者id" motions
+AfdianToMarkdown.exe --host="ifdian.net" -au "作者id" motions
 ```
 
 #### 下载作者所有的作品集
@@ -84,7 +84,7 @@ AfdianToMarkdown.exe -au "作者id" albums
 注：不会覆盖已经下载的文件，所以也不会更新评论。可以通过删除文件来强制更新
 
 ```shell
-AfdianToMarkdown.exe --host="afdian.com" update
+AfdianToMarkdown.exe --host="ifdian.net" update
 ```
 
 #### 下载指定文件中按行分隔的作品集（尚未实现）
@@ -93,7 +93,12 @@ AfdianToMarkdown.exe --host="afdian.com" update
 AfdianToMarkdown.exe -l "文件路径"
 ```
 
-### Update
+### 更新日志
+
+#### v0.3.0
+1. 修改默认域名为`afdian.com`
+2. 将寻找`cookies.json`的逻辑修改为在程序目录下而非工作目录下
+3. 修复了对域名`ifdian.net`解析不正确的问题
 
 #### v0.2.2
 

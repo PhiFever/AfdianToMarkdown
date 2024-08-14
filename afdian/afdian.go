@@ -98,9 +98,17 @@ func GetAuthTokenCookieString(cookies []Cookie) string {
 	return authTokenCookieString
 }
 
+func GetCookies() (string, string) {
+	cookies := ReadCookiesFromFile(utils.CookiePath)
+	cookieString := GetCookiesString(cookies)
+	//log.Println("cookieString:", cookieString)
+	authToken := GetAuthTokenCookieString(cookies)
+	return cookieString, authToken
+}
+
 func buildAfdianHeaders(cookieString string, referer string) http.Header {
 	return http.Header{
-		"authority":          {"afdian.net"},
+		"authority":          {"afdian.com"},
 		"accept":             {"accept", "application/json, text/plain, */*"},
 		"accept-language":    {"zh-CN,zh;q=0.9,en;q=0.8"},
 		"afd-fe-version":     {"20220508"},
@@ -137,7 +145,7 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 }
 
 // GetAuthorId 获取作者的ID
-// refer: https://afdian.net/a/Alice
+// refer: https://afdian.com/a/Alice
 func GetAuthorId(authorName string, referer string, cookieString string) string {
 	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", Host, authorName)
 	body := NewRequestGet(apiUrl, cookieString, referer)
@@ -225,8 +233,8 @@ func GetAlbumArticleList(albumId string, authToken string) []Article {
 
 // GetArticleContent 获取文章正文内容
 func GetArticleContent(articleUrl string, authToken string, converter *md.Converter) string {
-	//在album内的： https://afdian.net/api/post/get-detail?post_id={post_id}&album_id={album_id}
-	//在album外的： https://afdian.net/api/post/get-detail?post_id={post_id}&album_id=
+	//在album内的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id={album_id}
+	//在album外的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id=
 	log.Println("articleUrl:", articleUrl)
 	var apiUrl string
 	splitUrl := strings.Split(articleUrl, "/")
@@ -252,9 +260,9 @@ func GetArticleContent(articleUrl string, authToken string, converter *md.Conver
 
 // GetArticleComment 获取文章评论
 // TODO:根据publish_sn获取全部评论
-// https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn={publish_sn}&type=old&hot=
+// https://afdian.com/api/comment/get-list?post_id={post_id}&publish_sn={publish_sn}&type=old&hot=
 func GetArticleComment(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
-	//https://afdian.net/api/comment/get-list?post_id={post_id}&publish_sn=&type=old&hot=1
+	//https://afdian.com/api/comment/get-list?post_id={post_id}&publish_sn=&type=old&hot=1
 	splitUrl := strings.Split(articleUrl, "/")
 	postId := splitUrl[len(splitUrl)-1]
 	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", Host, postId)
