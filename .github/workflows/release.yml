@@ -1,45 +1,29 @@
-name: goreleaser
+name: Release
 
 on:
-  pull_request:
   push:
     tags:
-      - '*'
-
-permissions:
-  contents: write
+      - 'v*.*.*'  # 当你推送匹配 vX.X.X 的标签时触发
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
-  goreleaser-unix:
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up Go
-        uses: actions/setup-go@v5
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
-          distribution: goreleaser
-          # 'latest', 'nightly', or a semver
-          version: '~> v2'
-          args: release --clean
 
-  goreleaser-windows:
-    runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Set up Go
-        uses: actions/setup-go@v5
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: actions/setup-go@v4
         with:
-          distribution: goreleaser
-          version: '~> v2'
-          args: release --clean
+          go-version: '1.23.0'
+
+      - name: Install Goreleaser
+        run: go install github.com/goreleaser/goreleaser@latest
+
+      - name: Run Goreleaser
+        run: goreleaser release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
