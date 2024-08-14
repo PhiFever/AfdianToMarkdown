@@ -4,8 +4,8 @@ on:
   pull_request:
   push:
     tags:
-      - 'v*'  # 当你推送匹配 vX.X.X 的标签时触发
-  workflow_dispatch:  # 允许手动触发
+      - 'v*'  # trig on push tags vX.X.X
+  workflow_dispatch:  # allow to trig manually
 
 permissions:
   contents: write
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -27,7 +27,7 @@ jobs:
           go-version: stable
 
       - name: Run GoReleaser
-        run: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
