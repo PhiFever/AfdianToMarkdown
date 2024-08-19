@@ -20,9 +20,9 @@ import (
 )
 
 var (
-	Host                  string
-	cookiesString         string
-	authTokenCookieString string
+	Host            string
+	cookiesString   string
+	authTokenString string
 )
 
 const (
@@ -53,6 +53,10 @@ type Cookie struct {
 	Session    bool    `json:"session"`
 	StoreID    string  `json:"storeId"`
 	Value      string  `json:"value"`
+}
+
+func SetHost(afdianHost string) {
+	Host = fmt.Sprintf("https://%s", afdianHost)
 }
 
 // ReadCookiesFromFile 从文件中读取 Cookies
@@ -87,22 +91,22 @@ func GetCookiesString(cookies []Cookie) string {
 	return cookiesString
 }
 
-func GetAuthTokenCookieString(cookies []Cookie) string {
-	if authTokenCookieString == "" {
+func GetAuthTokenString(cookies []Cookie) string {
+	if authTokenString == "" {
 		for _, cookie := range cookies {
 			if cookie.Name == "auth_token" {
-				authTokenCookieString = fmt.Sprintf("auth_token=%s", cookie.Value)
+				authTokenString = fmt.Sprintf("auth_token=%s", cookie.Value)
 			}
 		}
 	}
-	return authTokenCookieString
+	return authTokenString
 }
 
-func GetCookies() (string, string) {
+func GetCookies() (cookieString string, authToken string) {
 	cookies := ReadCookiesFromFile(utils.CookiePath)
-	cookieString := GetCookiesString(cookies)
+	cookieString = GetCookiesString(cookies)
 	//log.Println("cookieString:", cookieString)
-	authToken := GetAuthTokenCookieString(cookies)
+	authToken = GetAuthTokenString(cookies)
 	return cookieString, authToken
 }
 
@@ -146,22 +150,21 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 
 // GetAuthorId 获取作者的ID
 // refer: https://afdian.com/a/Alice
-func GetAuthorId(authorName string, referer string, cookieString string) string {
+func GetAuthorId(authorName string, referer string, cookieString string) (authorId string) {
 	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", Host, authorName)
 	body := NewRequestGet(apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", body)
-	authorId := gjson.GetBytes(body, "data.user.user_id").String()
+	authorId = gjson.GetBytes(body, "data.user.user_id").String()
 	return authorId
 }
 
 // GetAuthorMotionUrlList 获取作者的文章列表
 // publish_sn获取的逻辑是第一轮请求为空，然后第二轮请求输入上一轮获取到的最后一篇文章的publish_sn，以此类推，直到获取到的publish_sn为空结束
-func GetAuthorMotionUrlList(userName string, cookieString string, prevPublishSn string) ([]Article, string) {
+func GetAuthorMotionUrlList(userName string, cookieString string, prevPublishSn string) (authorArticleList []Article, nextPublishSn string) {
 	userReferer := fmt.Sprintf("%s/a/%s", Host, userName)
 	userId := GetAuthorId(userName, userReferer, cookieString)
 	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", Host, userId, prevPublishSn)
 	log.Println("Get publish_sn apiUrl:", apiUrl)
-	var authorArticleList []Article
 
 	body := NewRequestGet(apiUrl, cookieString, userReferer)
 	//log.Printf("%s\n", body)
@@ -175,17 +178,16 @@ func GetAuthorMotionUrlList(userName string, cookieString string, prevPublishSn 
 		return true
 	})
 
-	publishSn := gjson.GetBytes(body, fmt.Sprintf("data.list.%d.publish_sn", len(authorArticleList)-1)).String()
-	log.Println("publishSn:", publishSn)
-	return authorArticleList, publishSn
+	nextPublishSn = gjson.GetBytes(body, fmt.Sprintf("data.list.%d.publish_sn", len(authorArticleList)-1)).String()
+	log.Println("nextPublishSn:", nextPublishSn)
+	return authorArticleList, nextPublishSn
 }
 
 // GetAlbumList 获取作者的作品集列表
-func GetAlbumList(userId string, referer string, cookieString string) []Album {
+func GetAlbumList(userId string, referer string, cookieString string) (albumList []Album) {
 	apiUrl := fmt.Sprintf("%s/api/user/get-album-list?user_id=%s", Host, userId)
 	body := NewRequestGet(apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", body)
-	var albumList []Album
 	albumListJson := gjson.GetBytes(body, "data.list")
 	//fmt.Println(utils.ToJSON(albumListJson))
 	albumListJson.ForEach(func(key, value gjson.Result) bool {
@@ -201,7 +203,7 @@ func GetAlbumList(userId string, referer string, cookieString string) []Album {
 }
 
 // GetAlbumArticleList 获取作品集的所有文章
-func GetAlbumArticleList(albumId string, authToken string) []Article {
+func GetAlbumArticleList(albumId string, authToken string) (albumArticleList []Article) {
 	//log.Println("albumId:", albumId)
 	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", Host, albumId)
 	authTokenCookie := fmt.Sprintf("auth_token=%s", authToken)
@@ -211,7 +213,6 @@ func GetAlbumArticleList(albumId string, authToken string) []Article {
 	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
 	//log.Println("postCount:", postCount)
 
-	var albumArticleList []Article
 	var i int64
 	for i = 0; i < postCount; i += 10 {
 		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", Host, albumId, i)
@@ -280,9 +281,8 @@ func GetArticleComment(articleUrl string, cookieString string) (commentString st
 	return commentString, hotCommentString
 }
 
-func getCommentString(commentJson gjson.Result) string {
+func getCommentString(commentJson gjson.Result) (commentString string) {
 	i := 0
-	hotCommentString := ""
 	commentJson.ForEach(func(key, value gjson.Result) bool {
 		nickName := value.Get("user.name").String()
 		publishTimeStamp := cast.ToInt64(value.Get("publish_time").String())
@@ -294,12 +294,12 @@ func getCommentString(commentJson gjson.Result) string {
 			replyUserNickName := replyUser.Get("name").String()
 			replyString = fmt.Sprintf("> 回复 %s: ", replyUserNickName)
 		}
-		hotCommentString += fmt.Sprintf("----\n##### <span>[%d] %s by %s</span>\n%s\n\n%s\n\n", i, publishTime, nickName, replyString, content)
-		//fmt.Println(hotCommentString)
+		commentString += fmt.Sprintf("----\n##### <span>[%d] %s by %s</span>\n%s\n\n%s\n\n", i, publishTime, nickName, replyString, content)
+		//fmt.Println(commentString)
 		i++
 		return true
 	})
-	return hotCommentString
+	return commentString
 }
 
 func SaveContentIfNotExist(articleName string, filePath string, articleUrl string, authToken string, converter *md.Converter) error {

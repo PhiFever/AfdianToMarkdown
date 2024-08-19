@@ -1,6 +1,6 @@
 module AfdianToMarkdown
 
-go 1.22
+go 1.23
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
@@ -9,7 +9,7 @@ require (
 	github.com/spf13/cast v1.7.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.3
-	github.com/urfave/cli/v2 v2.27.3
+	github.com/urfave/cli/v2 v2.27.4
 )
 
 require (

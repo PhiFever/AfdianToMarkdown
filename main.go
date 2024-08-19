@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	afdianHost    string
-	authorName    string
-	albumListPath string
+	afdianHost              string
+	authorName              string
+	albumListPath           string
+	cookieString, authToken string
 )
 
 func main() {
@@ -40,8 +41,8 @@ func main() {
 			if authorName != "" && albumListPath != "" {
 				return fmt.Errorf("不能同时使用 --author 和 --list 参数")
 			}
-			afdian.Host = fmt.Sprintf("https://%s", afdianHost)
-			// 其他全局预处理任务...
+			afdian.SetHost(afdianHost)
+			cookieString, authToken = afdian.GetCookies()
 			return nil
 		},
 		After: func(c *cli.Context) error {
@@ -58,7 +59,6 @@ func main() {
 				Name:  "motions",
 				Usage: "下载指定作者的所有动态",
 				Action: func(c *cli.Context) error {
-					cookieString, authToken := afdian.GetCookies()
 					return motion.GetMotions(authorName, cookieString, authToken)
 				},
 			},
@@ -66,7 +66,6 @@ func main() {
 				Name:  "albums",
 				Usage: "下载指定作者的所有作品集",
 				Action: func(c *cli.Context) error {
-					cookieString, authToken := afdian.GetCookies()
 					return album.GetAlbums(authorName, cookieString, authToken)
 				},
 			},
@@ -78,7 +77,6 @@ func main() {
 					if err != nil {
 						return err
 					}
-					cookieString, authToken := afdian.GetCookies()
 					for _, author := range authors {
 						log.Println("find exist author: ", author)
 						if err := motion.GetMotions(author, cookieString, authToken); err != nil {
