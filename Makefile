@@ -1,4 +1,4 @@
 build:
-	go build -o AfdianToMarkdown.exe main.go
+	go build -v -o AfdianToMarkdown.exe main.go
 test:
 	go test -v ./...

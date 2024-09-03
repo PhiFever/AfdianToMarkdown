@@ -20,9 +20,7 @@ import (
 )
 
 var (
-	Host            string
-	cookiesString   string
-	authTokenString string
+	Host string
 )
 
 const (
@@ -38,6 +36,12 @@ type Album struct {
 type Article struct {
 	ArticleName string `json:"articleName"`
 	ArticleUrl  string `json:"articleUrl"`
+}
+
+type Manga struct {
+	MangaName string   `json:"albumName"`
+	MangaUrl  string   `json:"mangaUrl"`
+	Pictures  []string `json:"pics"`
 }
 
 // Cookie 从 Chrome 中使用cookie master导出的 Cookies
@@ -82,21 +86,17 @@ func ReadCookiesFromFile(filePath string) []Cookie {
 	return cookies
 }
 
-func GetCookiesString(cookies []Cookie) string {
-	if cookiesString == "" {
-		for _, cookie := range cookies {
-			cookiesString += cookie.Name + "=" + cookie.Value + ";"
-		}
+func GetCookiesString(cookies []Cookie) (cookiesString string) {
+	for _, cookie := range cookies {
+		cookiesString += cookie.Name + "=" + cookie.Value + ";"
 	}
 	return cookiesString
 }
 
-func GetAuthTokenString(cookies []Cookie) string {
-	if authTokenString == "" {
-		for _, cookie := range cookies {
-			if cookie.Name == "auth_token" {
-				authTokenString = fmt.Sprintf("auth_token=%s", cookie.Value)
-			}
+func GetAuthTokenString(cookies []Cookie) (authTokenString string) {
+	for _, cookie := range cookies {
+		if cookie.Name == "auth_token" {
+			authTokenString = fmt.Sprintf("auth_token=%s", cookie.Value)
 		}
 	}
 	return authTokenString
@@ -232,6 +232,12 @@ func GetAlbumArticleList(albumId string, authToken string) (albumArticleList []A
 	return albumArticleList
 }
 
+// TODO
+func GetAlbumMangaList(albumId string, authToken string) (mangaList []Manga) {
+
+	return mangaList
+}
+
 // GetArticleContent 获取文章正文内容
 func GetArticleContent(articleUrl string, authToken string, converter *md.Converter) string {
 	//在album内的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id={album_id}
@@ -319,6 +325,32 @@ func SaveContentIfNotExist(articleName string, filePath string, articleUrl strin
 		time.Sleep(time.Millisecond * time.Duration(DelayMs))
 	} else {
 		log.Println(filePath, "已存在，跳过下载")
+	}
+	return nil
+}
+
+// TODO
+func SaveMangaIfNotExist(filePath string, manga Manga, authToken string, converter *md.Converter) error {
+	_, err := os.Stat(filePath)
+	fileExists := err == nil || os.IsExist(err)
+	log.Println("Picture Exists:", fileExists)
+
+	if !fileExists {
+		content := GetArticleContent(manga.MangaUrl, authToken, converter)
+		//TODO:用markdown语法保存图片
+		picContent := ""
+		for _, pic := range manga.Pictures {
+			picContent += fmt.Sprintf("![image](%s)\n", pic)
+		}
+
+		commentString, hotCommentString := GetArticleComment(manga.MangaUrl, authToken)
+		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
+		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
+		articleContent := "## " + manga.MangaName + "\n\n### Refer\n\n" + strings.Replace(manga.MangaUrl, "post", "p", 1) + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", content, picContent, hotCommentString, commentString)
+		//log.Println("articleContent:", articleContent)
+		if err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm); err != nil {
+			return err
+		}
 	}
 	return nil
 }
