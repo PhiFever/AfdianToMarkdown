@@ -70,6 +70,8 @@ func GetMangaAlbums(authorName string, cookieString string, authToken string) er
 		re := regexp.MustCompile("^.*/album/")
 		albumId := re.ReplaceAllString(album.AlbumUrl, "")
 		albumMangaList := afdian.GetAlbumMangaList(albumId, authToken)
+		//log.Println("albumMangaList:", albumMangaList)
+
 		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
 
 		_ = os.MkdirAll(path.Join(authorName, album.AlbumName), os.ModePerm)
@@ -82,7 +84,6 @@ func GetMangaAlbums(authorName string, cookieString string, authToken string) er
 				return err
 			}
 		}
-
 	}
 
 	return nil

@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -232,8 +233,43 @@ func GetAlbumArticleList(albumId string, authToken string) (albumArticleList []A
 	return albumArticleList
 }
 
-// TODO
+// TODO：和上一个函数合并
 func GetAlbumMangaList(albumId string, authToken string) (mangaList []Manga) {
+	//log.Println("albumId:", albumId)
+	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", Host, albumId)
+	authTokenCookie := fmt.Sprintf("auth_token=%s", authToken)
+	referer := fmt.Sprintf("%s/album/%s", Host, albumId)
+
+	postCountBodyText := NewRequestGet(postCountApiUrl, authTokenCookie, referer)
+	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
+	//log.Println("postCount:", postCount)
+
+	var i int64
+	for i = 0; i < postCount; i += 10 {
+		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", Host, albumId, i)
+		body := NewRequestGet(apiUrl, authTokenCookie, referer)
+
+		albumArticleListJson := gjson.GetBytes(body, "data.list")
+		albumArticleListJson.ForEach(func(key, value gjson.Result) bool {
+			//fmt.Println(value.Get("title").String())
+			//fmt.Println(value.Get("post_id").String())
+			postId := value.Get("post_id").String()
+			postUrl, _ := url.JoinPath(Host, "album", albumId, postId)
+			mangaList = append(mangaList,
+				Manga{
+					MangaName: utils.ToSafeFilename(value.Get("title").String()),
+					MangaUrl:  postUrl,
+					Pictures: func() []string {
+						var pictures []string
+						for _, result := range value.Get("pics").Array() {
+							pictures = append(pictures, result.String()) // 提取每个结果的字符串值
+						}
+						return pictures
+					}(),
+				})
+			return true
+		})
+	}
 
 	return mangaList
 }
@@ -329,22 +365,49 @@ func SaveContentIfNotExist(articleName string, filePath string, articleUrl strin
 	return nil
 }
 
-// TODO
 func SaveMangaIfNotExist(filePath string, manga Manga, authToken string, converter *md.Converter) error {
 	_, err := os.Stat(filePath)
 	fileExists := err == nil || os.IsExist(err)
 	log.Println("Picture Exists:", fileExists)
 
 	if !fileExists {
+		assetsDir := filepath.Join(filepath.Dir(filePath), utils.ImgDir)
+		if err := os.MkdirAll(assetsDir, os.ModePerm); err != nil {
+			return fmt.Errorf("create assets directory error: %v", err)
+		}
 		content := GetArticleContent(manga.MangaUrl, authToken, converter)
-		//TODO:用markdown语法保存图片
 		picContent := ""
-		for _, pic := range manga.Pictures {
-			picContent += fmt.Sprintf("![image](%s)\n", pic)
+		// 下载并保存图片到本地
+		for i, pictureUrl := range manga.Pictures {
+			// 生成本地图片文件名
+			ext := filepath.Ext(pictureUrl)
+			if ext == "" {
+				ext = ".jpg" // 默认扩展名
+			}
+			localFileName := fmt.Sprintf("%s_%d%s", utils.ToSafeFilename(manga.MangaName), i, ext)
+			localFilePath := filepath.Join(assetsDir, localFileName)
+
+			log.Printf("Downloading picture in manga %s: %s", manga.MangaName, pictureUrl)
+			// 使用requests下载图片
+			err := requests.
+				URL(pictureUrl).
+				//Header("Authorization", fmt.Sprintf("Bearer %s", authToken)).
+				ToFile(localFilePath).
+				Fetch(context.Background())
+
+			if err != nil {
+				log.Printf("Failed to download image %s: %v", pictureUrl, err)
+				// 如果下载失败，使用原始URL
+				picContent += fmt.Sprintf("![image](%s)\n", pictureUrl)
+				continue
+			}
+
+			// 使用相对路径引用本地图片
+			relPath := filepath.Join(utils.ImgDir, localFileName)
+			picContent += fmt.Sprintf("![image](%s)\n", relPath)
 		}
 
 		commentString, hotCommentString := GetArticleComment(manga.MangaUrl, authToken)
-		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
 		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
 		articleContent := "## " + manga.MangaName + "\n\n### Refer\n\n" + strings.Replace(manga.MangaUrl, "post", "p", 1) + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", content, picContent, hotCommentString, commentString)
 		//log.Println("articleContent:", articleContent)

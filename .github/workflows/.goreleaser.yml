@@ -1,0 +1,44 @@
+project_name: AfdianToMarkdown
+
+builds:
+  - id: unix
+    main: ./main.go
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags: "-s -w"
+    env:
+      - CGO_ENABLED=0
+  - id: windows
+    main: ./main.go
+    goos:
+      - windows
+    goarch:
+      - amd64
+    ldflags: "-s -w"
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - id: unix_archive
+    builds:
+      - unix
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+  - id: windows_archive
+    builds:
+      - windows
+    format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+
+release:
+  github:
+    owner: PhiFever
+    name: AfdianToMarkdown

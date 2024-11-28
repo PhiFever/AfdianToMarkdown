@@ -113,7 +113,9 @@ func TestGetAlbumList(t *testing.T) {
 				{AlbumName: "社区互动", AlbumUrl: getAlbumUrl("72d0d32a4f7e11efb83152540025c377")},
 				{AlbumName: "开放版权内容", AlbumUrl: getAlbumUrl("9bf7e3084f7c11ef9b6452540025c377")},
 				{AlbumName: "会员专享", AlbumUrl: getAlbumUrl("6f4b70763eb511eb957d52540025c377")},
-				{AlbumName: "南斗集", AlbumUrl: getAlbumUrl("c2624006a35111eeaebb52540025c377")},
+				{AlbumName: "善哉集", AlbumUrl: getAlbumUrl("3c92a37470e911efbb4752540025c377")},
+				//南斗集已被作者删除
+				//{AlbumName: "南斗集", AlbumUrl: getAlbumUrl("c2624006a35111eeaebb52540025c377")},
 			},
 		},
 	}
@@ -121,7 +123,7 @@ func TestGetAlbumList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotList := GetAlbumList(tt.args.userId, tt.args.referer, tt.args.cookieString)
 			for _, wantAlbum := range tt.want {
-				assert.Contains(t, gotList, wantAlbum, "GetAlbumList(%v, %v, %v) not contains tt.want", tt.args.userId, tt.args.referer, tt.args.cookieString)
+				assert.Contains(t, gotList, wantAlbum, "GetAlbumList(%v, %v, %v) not contains want album: %s", tt.args.userId, tt.args.referer, tt.args.cookieString, wantAlbum)
 			}
 		})
 	}
