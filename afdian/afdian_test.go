@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-const q9adg_id = "3f49234e3e8f11eb8f6152540025c377"
+const q9adgId = "3f49234e3e8f11eb8f6152540025c377"
 
 var cookieString, authToken string
 
@@ -45,7 +45,7 @@ func TestGetAuthorId(t *testing.T) {
 				referer:      Host,
 				cookieString: cookieString,
 			},
-			want: q9adg_id,
+			want: q9adgId,
 		},
 		{name: "深海巨狗",
 			args: args{
@@ -70,18 +70,18 @@ func TestGetAuthorMotionUrlList(t *testing.T) {
 		prevPublishSn string
 	}
 	tests := []struct {
-		name               string
-		args               args
-		wantArticleList    []Article
-		wantNextPublish_sn string
+		name              string
+		args              args
+		wantArticleList   []Article
+		wantNextPublishSn string
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			authorArticleList, nextPublish_sn := GetAuthorMotionUrlList(tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			authorArticleList, nextPublishSn := GetAuthorMotionUrlList(tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 			assert.Equalf(t, tt.wantArticleList, authorArticleList, "GetAuthorMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
-			assert.Equalf(t, tt.wantNextPublish_sn, nextPublish_sn, "GetAuthorMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			assert.Equalf(t, tt.wantNextPublishSn, nextPublishSn, "GetAuthorMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 		})
 	}
 }
@@ -100,7 +100,7 @@ func TestGetAlbumList(t *testing.T) {
 		{
 			name: "q9adg",
 			args: args{
-				userId:       q9adg_id,
+				userId:       q9adgId,
 				referer:      Host,
 				cookieString: cookieString,
 			},
@@ -143,7 +143,7 @@ func TestGetAlbumArticleList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, GetAlbumArticleList(tt.args.albumId, tt.args.authToken), "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
+			assert.Equalf(t, tt.want, GetAlbumPostList(tt.args.albumId, tt.args.authToken), "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
 		})
 	}
 }

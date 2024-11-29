@@ -30,19 +30,40 @@ const (
 )
 
 type Album struct {
-	AlbumName string `json:"albumName"`
-	AlbumUrl  string `json:"albumUrl"`
+	AlbumName string
+	AlbumUrl  string
+}
+
+type AlbumPost interface {
+	GetName() string
+	GetUrl() string
 }
 
 type Article struct {
-	ArticleName string `json:"articleName"`
-	ArticleUrl  string `json:"articleUrl"`
+	Name string
+	Url  string
+}
+
+func (a Article) GetName() string {
+	return a.Name
+}
+
+func (a Article) GetUrl() string {
+	return a.Url
 }
 
 type Manga struct {
-	MangaName string   `json:"albumName"`
-	MangaUrl  string   `json:"mangaUrl"`
-	Pictures  []string `json:"pics"`
+	Name     string
+	Url      string
+	Pictures []string
+}
+
+func (m Manga) GetName() string {
+	return m.Name
+}
+
+func (m Manga) GetUrl() string {
+	return m.Url
 }
 
 // Cookie 从 Chrome 中使用cookie master导出的 Cookies
@@ -116,8 +137,6 @@ func buildAfdianHeaders(cookieString string, referer string) http.Header {
 		"authority":          {"afdian.com"},
 		"accept":             {"accept", "application/json, text/plain, */*"},
 		"accept-language":    {"zh-CN,zh;q=0.9,en;q=0.8"},
-		"afd-fe-version":     {"20220508"},
-		"afd-stat-id":        {"c78521949a7c11ee8c2452540025c377"},
 		"cache-control":      {"no-cache"},
 		"cookie":             {cookieString},
 		"dnt":                {"1"},
@@ -175,7 +194,7 @@ func GetAuthorMotionUrlList(userName string, cookieString string, prevPublishSn 
 		articleId := value.Get("post_id").String()
 		articleUrl, _ := url.JoinPath(Host, "post", articleId)
 		articleName := value.Get("title").String()
-		authorArticleList = append(authorArticleList, Article{ArticleName: utils.ToSafeFilename(articleName), ArticleUrl: articleUrl})
+		authorArticleList = append(authorArticleList, Article{Name: utils.ToSafeFilename(articleName), Url: articleUrl})
 		return true
 	})
 
@@ -203,75 +222,47 @@ func GetAlbumList(userId string, referer string, cookieString string) (albumList
 	return albumList
 }
 
-// GetAlbumArticleList 获取作品集的所有文章
-func GetAlbumArticleList(albumId string, authToken string) (albumArticleList []Article) {
-	//log.Println("albumId:", albumId)
+func GetAlbumPostList(albumId string, authToken string) (albumPostList []AlbumPost) {
 	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", Host, albumId)
 	authTokenCookie := fmt.Sprintf("auth_token=%s", authToken)
 	referer := fmt.Sprintf("%s/album/%s", Host, albumId)
 
 	postCountBodyText := NewRequestGet(postCountApiUrl, authTokenCookie, referer)
 	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
-	//log.Println("postCount:", postCount)
 
 	var i int64
 	for i = 0; i < postCount; i += 10 {
 		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", Host, albumId, i)
 		body := NewRequestGet(apiUrl, authTokenCookie, referer)
 
-		albumArticleListJson := gjson.GetBytes(body, "data.list")
-		albumArticleListJson.ForEach(func(key, value gjson.Result) bool {
-			//fmt.Println(value.Get("title").String())
-			//fmt.Println(value.Get("post_id").String())
+		albumPostListJson := gjson.GetBytes(body, "data.list")
+		albumPostListJson.ForEach(func(key, value gjson.Result) bool {
 			postId := value.Get("post_id").String()
 			postUrl, _ := url.JoinPath(Host, "album", albumId, postId)
-			albumArticleList = append(albumArticleList, Article{ArticleName: utils.ToSafeFilename(value.Get("title").String()), ArticleUrl: postUrl})
-			return true
-		})
-	}
 
-	return albumArticleList
-}
-
-// TODO：和上一个函数合并
-func GetAlbumMangaList(albumId string, authToken string) (mangaList []Manga) {
-	//log.Println("albumId:", albumId)
-	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", Host, albumId)
-	authTokenCookie := fmt.Sprintf("auth_token=%s", authToken)
-	referer := fmt.Sprintf("%s/album/%s", Host, albumId)
-
-	postCountBodyText := NewRequestGet(postCountApiUrl, authTokenCookie, referer)
-	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
-	//log.Println("postCount:", postCount)
-
-	var i int64
-	for i = 0; i < postCount; i += 10 {
-		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", Host, albumId, i)
-		body := NewRequestGet(apiUrl, authTokenCookie, referer)
-
-		albumArticleListJson := gjson.GetBytes(body, "data.list")
-		albumArticleListJson.ForEach(func(key, value gjson.Result) bool {
-			//fmt.Println(value.Get("title").String())
-			//fmt.Println(value.Get("post_id").String())
-			postId := value.Get("post_id").String()
-			postUrl, _ := url.JoinPath(Host, "album", albumId, postId)
-			mangaList = append(mangaList,
-				Manga{
-					MangaName: utils.ToSafeFilename(value.Get("title").String()),
-					MangaUrl:  postUrl,
-					Pictures: func() []string {
-						var pictures []string
-						for _, result := range value.Get("pics").Array() {
-							pictures = append(pictures, result.String()) // 提取每个结果的字符串值
-						}
-						return pictures
-					}(),
+			if value.Get("pics").Exists() {
+				// 如果有图片，则创建一个 Manga 对象
+				var pictures []string
+				for _, result := range value.Get("pics").Array() {
+					pictures = append(pictures, result.String())
+				}
+				albumPostList = append(albumPostList, Manga{
+					Name:     utils.ToSafeFilename(value.Get("title").String()),
+					Url:      postUrl,
+					Pictures: pictures,
 				})
+			} else {
+				// 否则创建一个 Article 对象
+				albumPostList = append(albumPostList, Article{
+					Name: utils.ToSafeFilename(value.Get("title").String()),
+					Url:  postUrl,
+				})
+			}
 			return true
 		})
 	}
 
-	return mangaList
+	return albumPostList
 }
 
 // GetArticleContent 获取文章正文内容
@@ -375,7 +366,7 @@ func SaveMangaIfNotExist(filePath string, manga Manga, authToken string, convert
 		if err := os.MkdirAll(assetsDir, os.ModePerm); err != nil {
 			return fmt.Errorf("create assets directory error: %v", err)
 		}
-		content := GetArticleContent(manga.MangaUrl, authToken, converter)
+		content := GetArticleContent(manga.Url, authToken, converter)
 		picContent := ""
 		// 下载并保存图片到本地
 		for i, pictureUrl := range manga.Pictures {
@@ -384,10 +375,10 @@ func SaveMangaIfNotExist(filePath string, manga Manga, authToken string, convert
 			if ext == "" {
 				ext = ".jpg" // 默认扩展名
 			}
-			localFileName := fmt.Sprintf("%s_%d%s", utils.ToSafeFilename(manga.MangaName), i, ext)
+			localFileName := fmt.Sprintf("%s_%d%s", utils.ToSafeFilename(manga.Name), i, ext)
 			localFilePath := filepath.Join(assetsDir, localFileName)
 
-			log.Printf("Downloading picture in manga %s: %s", manga.MangaName, pictureUrl)
+			log.Printf("Downloading picture in manga %s: %s", manga.Name, pictureUrl)
 			// 使用requests下载图片
 			err := requests.
 				URL(pictureUrl).
@@ -407,9 +398,9 @@ func SaveMangaIfNotExist(filePath string, manga Manga, authToken string, convert
 			picContent += fmt.Sprintf("![image](%s)\n", relPath)
 		}
 
-		commentString, hotCommentString := GetArticleComment(manga.MangaUrl, authToken)
+		commentString, hotCommentString := GetArticleComment(manga.Url, authToken)
 		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
-		articleContent := "## " + manga.MangaName + "\n\n### Refer\n\n" + strings.Replace(manga.MangaUrl, "post", "p", 1) + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", content, picContent, hotCommentString, commentString)
+		articleContent := "## " + manga.Name + "\n\n### Refer\n\n" + strings.Replace(manga.Url, "post", "p", 1) + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", content, picContent, hotCommentString, commentString)
 		//log.Println("articleContent:", articleContent)
 		if err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm); err != nil {
 			return err

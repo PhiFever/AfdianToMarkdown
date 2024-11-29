@@ -70,13 +70,6 @@ func main() {
 				},
 			},
 			{
-				Name:  "mangaAlbums",
-				Usage: "下载指定作者的所有漫画作品集",
-				Action: func(c *cli.Context) error {
-					return album.GetMangaAlbums(authorName, cookieString, authToken)
-				},
-			},
-			{
 				Name:  "update",
 				Usage: "更新所有已经下载的作者的动态和作品集",
 				Action: func(c *cli.Context) error {

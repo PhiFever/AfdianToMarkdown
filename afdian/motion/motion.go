@@ -42,9 +42,9 @@ func GetMotions(authorName string, cookieString string, authToken string) error 
 
 	converter := md.NewConverter("", true, nil)
 	for i, article := range articleList {
-		filePath := path.Join(utils.GetExecutionPath(), authorName, authorDir, cast.ToString(i)+"_"+article.ArticleName+".md")
+		filePath := path.Join(utils.GetExecutionPath(), authorName, authorDir, cast.ToString(i)+"_"+article.Name+".md")
 		log.Println("Saving file:", filePath)
-		if err := afdian.SaveContentIfNotExist(article.ArticleName, filePath, article.ArticleUrl, authToken, converter); err != nil {
+		if err := afdian.SaveContentIfNotExist(article.Name, filePath, article.Url, authToken, converter); err != nil {
 			return err
 		}
 		//break

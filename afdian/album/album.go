@@ -15,14 +15,9 @@ import (
 
 func GetAlbums(authorName string, cookieString string, authToken string) error {
 	albumHost, _ := url.JoinPath(afdian.Host, "a", authorName, "album")
-	// 获取作者的所有作品集
 	log.Println("albumHost:", albumHost)
-
 	userId := afdian.GetAuthorId(authorName, albumHost, cookieString)
-	//log.Println("userId:", userId)
 	albumList := afdian.GetAlbumList(userId, albumHost, cookieString)
-	//log.Println("albumList:", utils.ToJSON(albumList))
-
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
 		log.Println("Find album: ", album.AlbumName)
@@ -30,61 +25,32 @@ func GetAlbums(authorName string, cookieString string, authToken string) error {
 		//album.AlbumUrl会类似于 https://afdian.com/album/xyz
 		re := regexp.MustCompile("^.*/album/")
 		albumId := re.ReplaceAllString(album.AlbumUrl, "")
-		albumArticleList := afdian.GetAlbumArticleList(albumId, authToken)
+		albumPostList := afdian.GetAlbumPostList(albumId, authToken)
 		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
-
-		//log.Println("albumArticleList:", utils.ToJSON(albumArticleList))
-		//log.Println(len(albumArticleList))
-
 		_ = os.MkdirAll(path.Join(authorName, album.AlbumName), os.ModePerm)
 
-		for i, article := range albumArticleList {
-			filePath := path.Join(utils.GetExecutionPath(), authorName, album.AlbumName, cast.ToString(i)+"_"+article.ArticleName+".md")
+		for i, post := range albumPostList {
+			filePath := path.Join(utils.GetExecutionPath(), authorName, album.AlbumName, cast.ToString(i)+"_"+post.GetName()+".md")
 			log.Println("Saving file:", filePath)
 
-			if err := afdian.SaveContentIfNotExist(article.ArticleName, filePath, article.ArticleUrl, authToken, converter); err != nil {
-				return err
-			}
-			//break
-		}
-
-	}
-	return nil
-}
-
-func GetMangaAlbums(authorName string, cookieString string, authToken string) error {
-	albumHost, _ := url.JoinPath(afdian.Host, "a", authorName, "album")
-	// 获取作者的所有作品集
-	log.Println("albumHost:", albumHost)
-
-	userId := afdian.GetAuthorId(authorName, albumHost, cookieString)
-	//log.Println("userId:", userId)
-	albumList := afdian.GetAlbumList(userId, albumHost, cookieString)
-	//log.Println("albumList:", utils.ToJSON(albumList))
-
-	converter := md.NewConverter("", true, nil)
-	for _, album := range albumList {
-		log.Println("Find album: ", album.AlbumName)
-		//获取作品集的所有文章
-		//album.AlbumUrl会类似于 https://afdian.com/album/xyz
-		re := regexp.MustCompile("^.*/album/")
-		albumId := re.ReplaceAllString(album.AlbumUrl, "")
-		albumMangaList := afdian.GetAlbumMangaList(albumId, authToken)
-		//log.Println("albumMangaList:", albumMangaList)
-
-		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
-
-		_ = os.MkdirAll(path.Join(authorName, album.AlbumName), os.ModePerm)
-
-		for _, manga := range albumMangaList {
-			filePath := path.Join(utils.GetExecutionPath(), authorName, album.AlbumName, manga.MangaName+".md")
-			log.Println("Saving file:", filePath)
-
-			if err := afdian.SaveMangaIfNotExist(filePath, manga, authToken, converter); err != nil {
-				return err
+			if manga, ok := post.(afdian.Manga); ok {
+				// 如果转换成功，说明当前元素是 Manga 类型
+				//fmt.Println("Manga Name:", manga.Name)
+				//fmt.Println("Manga URL:", manga.Url)
+				//fmt.Println("Manga Pictures:", manga.Pictures)
+				if err := afdian.SaveMangaIfNotExist(filePath, manga, authToken, converter); err != nil {
+					return err
+				}
+			} else if article, ok := post.(afdian.Article); ok {
+				if err := afdian.SaveContentIfNotExist(article.Name, filePath, article.Url, authToken, converter); err != nil {
+					return err
+				}
+			} else {
+				log.Fatal("Unknown post type")
 			}
 		}
-	}
+		break
 
+	}
 	return nil
 }
