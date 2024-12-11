@@ -6,10 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	md "github.com/JohannesKaufmann/html-to-markdown"
-	"github.com/carlmjohnson/requests"
-	"github.com/spf13/cast"
-	"github.com/tidwall/gjson"
 	"io"
 	"log"
 	"net/http"
@@ -18,6 +14,11 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/carlmjohnson/requests"
+	"github.com/spf13/cast"
+	"github.com/tidwall/gjson"
 )
 
 var (
@@ -222,18 +223,17 @@ func GetAlbumList(userId string, referer string, cookieString string) (albumList
 	return albumList
 }
 
-func GetAlbumPostList(albumId string, authToken string) (albumPostList []AlbumPost) {
+func GetAlbumPostList(albumId string, cookieString string) (albumPostList []AlbumPost) {
 	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", Host, albumId)
-	authTokenCookie := fmt.Sprintf("auth_token=%s", authToken)
 	referer := fmt.Sprintf("%s/album/%s", Host, albumId)
 
-	postCountBodyText := NewRequestGet(postCountApiUrl, authTokenCookie, referer)
+	postCountBodyText := NewRequestGet(postCountApiUrl, cookieString, referer)
 	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
 
 	var i int64
 	for i = 0; i < postCount; i += 10 {
 		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", Host, albumId, i)
-		body := NewRequestGet(apiUrl, authTokenCookie, referer)
+		body := NewRequestGet(apiUrl, cookieString, referer)
 
 		albumPostListJson := gjson.GetBytes(body, "data.list")
 		albumPostListJson.ForEach(func(key, value gjson.Result) bool {
