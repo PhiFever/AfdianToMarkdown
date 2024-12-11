@@ -39,6 +39,7 @@ func GetAlbums(authorName string, cookieString string, authToken string) error {
 				//fmt.Println("Manga Name:", manga.Name)
 				//fmt.Println("Manga URL:", manga.Url)
 				//fmt.Println("Manga Pictures:", manga.Pictures)
+				//FIXME:对不属于漫画的作品集进行处理时仍会创建.assets文件夹
 				if err := afdian.SaveMangaIfNotExist(filePath, manga, authToken, converter); err != nil {
 					return err
 				}

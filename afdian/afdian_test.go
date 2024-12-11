@@ -114,7 +114,7 @@ func TestGetAlbumList(t *testing.T) {
 				{AlbumName: "开放版权内容", AlbumUrl: getAlbumUrl("9bf7e3084f7c11ef9b6452540025c377")},
 				{AlbumName: "会员专享", AlbumUrl: getAlbumUrl("6f4b70763eb511eb957d52540025c377")},
 				{AlbumName: "善哉集", AlbumUrl: getAlbumUrl("3c92a37470e911efbb4752540025c377")},
-				//南斗集已被作者删除
+				//《南斗集》已被作者删除，迁移至《亲密关系》
 				//{AlbumName: "南斗集", AlbumUrl: getAlbumUrl("c2624006a35111eeaebb52540025c377")},
 			},
 		},
