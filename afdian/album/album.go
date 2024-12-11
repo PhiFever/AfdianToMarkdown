@@ -3,14 +3,15 @@ package album
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/utils"
-	md "github.com/JohannesKaufmann/html-to-markdown"
-	"github.com/spf13/cast"
 	"log"
 	"net/url"
 	"os"
 	"path"
 	"regexp"
 	"time"
+
+	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/spf13/cast"
 )
 
 func GetAlbums(authorName string, cookieString string, authToken string) error {
@@ -25,7 +26,7 @@ func GetAlbums(authorName string, cookieString string, authToken string) error {
 		//album.AlbumUrl会类似于 https://afdian.com/album/xyz
 		re := regexp.MustCompile("^.*/album/")
 		albumId := re.ReplaceAllString(album.AlbumUrl, "")
-		albumPostList := afdian.GetAlbumPostList(albumId, authToken)
+		albumPostList := afdian.GetAlbumPostList(albumId, cookieString)
 		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
 		_ = os.MkdirAll(path.Join(authorName, album.AlbumName), os.ModePerm)
 
@@ -49,7 +50,6 @@ func GetAlbums(authorName string, cookieString string, authToken string) error {
 				log.Fatal("Unknown post type")
 			}
 		}
-		break
 
 	}
 	return nil
