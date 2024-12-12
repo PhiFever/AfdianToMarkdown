@@ -1,3 +1,5 @@
+![GitHub Repo stars](https://img.shields.io/github/stars/PhiFever/AfdianToMarkdown)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/PhiFever/AfdianToMarkdown/total)
 ## AfdianToMarkdown
 
 爱发电(afdian.com)爬虫，用于下载爱发电作者的动态和作品集并保存为markdown文件（目前只能保存纯文本内容，不支持保存图片）。
