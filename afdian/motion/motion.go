@@ -3,6 +3,7 @@ package motion
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/utils"
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -19,36 +20,36 @@ const (
 
 // GetMotions 获取作者的所有作品
 func GetMotions(authorName string, cookieString string, authToken string) error {
-	authorHost, _ := url.JoinPath(afdian.Host, "a", authorName)
+	authorHost, _ := url.JoinPath(afdian.HostUrl, "a", authorName)
 	//创建作者文件夹
-	_ = os.MkdirAll(path.Join(authorName, authorDir), os.ModePerm)
+	if err := os.MkdirAll(path.Join(authorName, authorDir), os.ModePerm); err != nil {
+		return fmt.Errorf("create author dir error: %v", err)
+	}
 	log.Println("authorHost:", authorHost)
 
 	//获取作者作品列表
 	prevPublishSn := ""
-	var articleList []afdian.Article
+	var postList []afdian.Post
 	for {
 		//获取作者作品列表
-		subArticleList, publishSn := afdian.GetAuthorMotionUrlList(authorName, cookieString, prevPublishSn)
-		articleList = append(articleList, subArticleList...)
+		subArticleList, publishSn := afdian.GetMotionUrlList(authorName, cookieString, prevPublishSn)
+		postList = append(postList, subArticleList...)
 		prevPublishSn = publishSn
 		if publishSn == "" {
 			break
 		}
 		time.Sleep(time.Millisecond * time.Duration(30))
 	}
-	log.Println("articleList:", utils.ToJSON(articleList))
-	log.Println("articleList length:", len(articleList))
+	//log.Println("postList:", utils.ToJSON(postList))
+	log.Println("postList length:", len(postList))
 
 	converter := md.NewConverter("", true, nil)
-	for i, article := range articleList {
+	for i, article := range postList {
 		filePath := path.Join(utils.GetExecutionPath(), authorName, authorDir, cast.ToString(i)+"_"+article.Name+".md")
 		log.Println("Saving file:", filePath)
-		if err := afdian.SaveContentIfNotExist(article.Name, filePath, article.Url, authToken, converter); err != nil {
+		if err := afdian.SavePostIfNotExist(filePath, article, authToken, converter); err != nil {
 			return err
 		}
-		//break
 	}
-
 	return nil
 }

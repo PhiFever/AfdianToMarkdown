@@ -18,13 +18,13 @@ func init() {
 	//localPath, _ := os.Getwd()
 	//执行测试前，先设置cookie路径为实际本地路径
 	utils.CookiePath = `D:\MyProject\Golang\AfdianToMarkdown\cookies.json`
-	SetHost("afdian.com")
+	SetHostUrl("afdian.com")
 	log.Println("cookiePath:", utils.CookiePath)
 	cookieString, authToken = GetCookies()
 }
 
 func getAlbumUrl(AlbumId string) string {
-	return fmt.Sprintf("%s/album/%s", Host, AlbumId)
+	return fmt.Sprintf("%s/album/%s", HostUrl, AlbumId)
 }
 
 func TestGetAuthorId(t *testing.T) {
@@ -42,7 +42,7 @@ func TestGetAuthorId(t *testing.T) {
 			name: "q9adg",
 			args: args{
 				authorName:   "q9adg",
-				referer:      Host,
+				referer:      HostUrl,
 				cookieString: cookieString,
 			},
 			want: q9adgId,
@@ -50,7 +50,7 @@ func TestGetAuthorId(t *testing.T) {
 		{name: "深海巨狗",
 			args: args{
 				authorName:   "Arabian_nights",
-				referer:      Host,
+				referer:      HostUrl,
 				cookieString: cookieString,
 			},
 			want: "d7c0ebe2c83911ea8ad552540025c377",
@@ -72,16 +72,16 @@ func TestGetAuthorMotionUrlList(t *testing.T) {
 	tests := []struct {
 		name              string
 		args              args
-		wantArticleList   []Article
+		wantArticleList   []Post
 		wantNextPublishSn string
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			authorArticleList, nextPublishSn := GetAuthorMotionUrlList(tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
-			assert.Equalf(t, tt.wantArticleList, authorArticleList, "GetAuthorMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
-			assert.Equalf(t, tt.wantNextPublishSn, nextPublishSn, "GetAuthorMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			authorArticleList, nextPublishSn := GetMotionUrlList(tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			assert.Equalf(t, tt.wantArticleList, authorArticleList, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			assert.Equalf(t, tt.wantNextPublishSn, nextPublishSn, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 		})
 	}
 }
@@ -101,7 +101,7 @@ func TestGetAlbumList(t *testing.T) {
 			name: "q9adg",
 			args: args{
 				userId:       q9adgId,
-				referer:      Host,
+				referer:      HostUrl,
 				cookieString: cookieString,
 			},
 			want: []Album{
@@ -137,7 +137,7 @@ func TestGetAlbumArticleList(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want []Article
+		want []Post
 	}{
 		// TODO: Add test cases.
 	}
@@ -163,7 +163,7 @@ func TestGetArticleContent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, GetArticleContent(tt.args.articleUrl, tt.args.authToken, tt.args.converter), "GetArticleContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
+			assert.Equalf(t, tt.want, getPostContent(tt.args.articleUrl, tt.args.authToken, tt.args.converter), "getPostContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
 		})
 	}
 }
@@ -183,9 +183,9 @@ func TestGetArticleComment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotCommentString, gotHotCommentString := GetArticleComment(tt.args.articleUrl, tt.args.cookieString)
-			assert.Equalf(t, tt.wantCommentString, gotCommentString, "GetArticleComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
-			assert.Equalf(t, tt.wantHotCommentString, gotHotCommentString, "GetArticleComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
+			gotCommentString, gotHotCommentString := GetPostComment(tt.args.articleUrl, tt.args.cookieString)
+			assert.Equalf(t, tt.wantCommentString, gotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
+			assert.Equalf(t, tt.wantHotCommentString, gotHotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
 		})
 	}
 }

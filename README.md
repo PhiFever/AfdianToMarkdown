@@ -19,47 +19,13 @@
 **注意主站域名可能需要手动指定（默认为afdian.com)**
 
 ### 构建
+- 参见`Makefile`
 
-本程序在go1.23.0下构建，如无编译环境，也可到release页面自行下载对应的可执行文件
-
-```
-make build
-```
+- 本程序在go1.23下构建，如无编译环境，也可到release页面自行下载对应的可执行文件
 
 ### 帮助
-注：--list功能尚未实现
-
 ```
 $ .\AfdianToMarkdown.exe -h
-NAME:
-   AfdianToMarkdown - 爱发电下载器，支持按作者或按作品集爬取数据
-                      Github Link: https://github.com/PhiFever/AfdianToMarkdown
-
-USAGE:
-   eg:
-     AfdianToMarkdown.exe -au Alice motions
-   eg:
-     AfdianToMarkdown.exe -au Alice albums
-   eg:
-     AfdianToMarkdown.exe -l album_list.txt
-   eg:
-     AfdianToMarkdown.exe update
-
-VERSION:
-   0.3.0
-
-COMMANDS:
-   motions  下载指定作者的所有动态
-   albums   下载指定作者的所有作品集
-   update   更新所有已经下载的作者的动态和作品集
-
-GLOBAL OPTIONS:
-   --host value                主站域名，默认为afdian.com，被封可自行更改 (default: "afdian.com")
-   --author value, --au value  待下载的作者id
-   --list value, -l value      待下载的作品集id列表文件，每行一个id。(不能与参数-au同时使用)
-   --help, -h                  show help
-   --version, -v               print the version
-
 ```
 
 ### 使用
@@ -73,13 +39,13 @@ GLOBAL OPTIONS:
 #### 下载作者的所有动态
 
 ```shell
-AfdianToMarkdown.exe --host="ifdian.net" -au "作者id" motions
+AfdianToMarkdown.exe motions --host="ifdian.net" -au "作者id" 
 ```
 
 #### 下载作者所有的作品集
 
 ```shell
-AfdianToMarkdown.exe -au "作者id" albums
+AfdianToMarkdown.exe albums -au "作者id" 
 ```
 
 #### 更新所有已经下载的作者的动态和作品集
@@ -87,12 +53,6 @@ AfdianToMarkdown.exe -au "作者id" albums
 
 ```shell
 AfdianToMarkdown.exe --host="ifdian.net" update
-```
-
-#### 下载指定文件中按行分隔的作品集（尚未实现）
-
-```shell
-AfdianToMarkdown.exe -l "文件路径"
 ```
 
 ### 更新日志
