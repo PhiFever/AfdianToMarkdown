@@ -32,20 +32,32 @@ $ .\AfdianToMarkdown.exe -h
 
 本程序为命令行程序，需要在`cmd`,`powershell`或`bash`等shell中输入参数调用刚才构建的（或在release中下载的）可执行程序
 
-在windows平台上进行调用时，有如下示例
+- 在win11上，直接在已下载的可执行程序目录下右键，点击`open in terminal`或`在终端中打开`
 
-注：下文提到的作者id为作者主页url的最后一部分，如`https://afdian.com/a/作者id/`
+  ![image](https://github.com/user-attachments/assets/94013988-2579-4fe2-a4b2-5245ad4501da)
+
+- 在win10上，情况稍微复杂
+
+  1. win+r，输入`powershell`
+
+  2. 找到可执行文件所在的路径（如`D:\MyProject\Golang\AfdianToMarkdown\AfdianToMarkdown.exe`)
+
+     输入`cd D:\MyProject\Golang\AfdianToMarkdown`
+
+后续所有的指令都将在命令行中执行。在windows平台上进行调用时，有如下示例（即`AfdianToMarkdown.exe -h`）：
+
+注：下文提到的`user_id`为作者主页url的最后一部分，如`https://afdian.com/a/user_id/`
 
 #### 下载作者的所有动态
 
 ```shell
-AfdianToMarkdown.exe motions --host="ifdian.net" -au "作者id" 
+AfdianToMarkdown.exe motions --host="ifdian.net" -au "user_id" 
 ```
 
 #### 下载作者所有的作品集
 
 ```shell
-AfdianToMarkdown.exe albums -au "作者id" 
+AfdianToMarkdown.exe albums -au "user_id" 
 ```
 
 #### 更新所有已经下载的作者的动态和作品集
@@ -57,7 +69,7 @@ AfdianToMarkdown.exe --host="ifdian.net" update
 
 ### 更新日志
 ### v0.4.0
-增加了对于漫画作品集的支持（暂未发布）
+增加了对于含图片作品集的支持
 
 #### v0.3.0
 1. 修改默认域名为`afdian.com`
