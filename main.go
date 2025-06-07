@@ -18,6 +18,7 @@ var (
 	authorName              string
 	albumUrl                string
 	cookieString, authToken string
+	disableComment          bool
 )
 
 func main() {
@@ -35,6 +36,7 @@ func main() {
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.com", Usage: "主站域名，如访问不通可自行更改"},
+			&cli.BoolFlag{Name: "disable_comment", Destination: &disableComment, Value: false, Usage: "是否禁用评论下载，默认不禁用"},
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 			// 在这里可以根据需要做全局参数的预处理
@@ -58,7 +60,7 @@ func main() {
 					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorName, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return motion.GetMotions(authorName, cookieString, authToken)
+					return motion.GetMotions(authorName, cookieString, authToken, disableComment)
 				},
 			},
 			//{
@@ -82,7 +84,7 @@ func main() {
 					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorName, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return album.GetAlbums(authorName, cookieString, authToken)
+					return album.GetAlbums(authorName, cookieString, authToken, disableComment)
 				},
 			},
 			{
@@ -95,10 +97,10 @@ func main() {
 					}
 					for _, author := range authors {
 						log.Println("find exist author: ", author)
-						if err := motion.GetMotions(author, cookieString, authToken); err != nil {
+						if err := motion.GetMotions(author, cookieString, authToken, disableComment); err != nil {
 							return err
 						}
-						if err := album.GetAlbums(author, cookieString, authToken); err != nil {
+						if err := album.GetAlbums(author, cookieString, authToken, disableComment); err != nil {
 							return err
 						}
 					}
@@ -108,7 +110,7 @@ func main() {
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			//如果没有传入任何参数，则显示帮助信息
-			cli.ShowAppHelp(cmd)
+			_ = cli.ShowAppHelp(cmd)
 			return nil
 		},
 	}

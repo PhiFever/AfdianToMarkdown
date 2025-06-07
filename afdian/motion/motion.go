@@ -19,7 +19,7 @@ const (
 )
 
 // GetMotions 获取作者的所有作品
-func GetMotions(authorName string, cookieString string, authToken string) error {
+func GetMotions(authorName string, cookieString string, authToken string, disableComment bool) error {
 	authorHost, _ := url.JoinPath(afdian.HostUrl, "a", authorName)
 	//创建作者文件夹
 	if err := os.MkdirAll(path.Join(authorName, authorDir), os.ModePerm); err != nil {
@@ -46,8 +46,7 @@ func GetMotions(authorName string, cookieString string, authToken string) error 
 	converter := md.NewConverter("", true, nil)
 	for i, article := range postList {
 		filePath := path.Join(utils.GetExecutionPath(), authorName, authorDir, cast.ToString(i)+"_"+article.Name+".md")
-		log.Println("Saving file:", filePath)
-		if err := afdian.SavePostIfNotExist(filePath, article, authToken, converter); err != nil {
+		if err := afdian.SavePostIfNotExist(filePath, article, authToken, disableComment, converter); err != nil {
 			return err
 		}
 	}

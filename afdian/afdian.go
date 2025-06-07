@@ -310,10 +310,11 @@ func getCommentString(commentJson gjson.Result) (commentString string) {
 	return commentString
 }
 
-func SavePostIfNotExist(filePath string, article Post, authToken string, converter *md.Converter) error {
+func SavePostIfNotExist(filePath string, article Post, authToken string, disableComment bool, converter *md.Converter) error {
 	_, err := os.Stat(filePath)
 	fileExists := err == nil || os.IsExist(err)
 	if !fileExists {
+		log.Println("Saving file:", filePath)
 		content := getPostContent(article.Url, authToken, converter)
 		//TODO:不支持图文混排
 		picContent, err := getPictures(filePath, article)
@@ -321,13 +322,20 @@ func SavePostIfNotExist(filePath string, article Post, authToken string, convert
 			return err
 		}
 
-		commentString, hotCommentString := GetPostComment(article.Url, authToken)
-		//Refer中需要把articleUrl中的post替换成p才能在浏览器正常访问
-		articleContent := "## " + article.Name + "\n\n### Refer\n\n" + strings.Replace(article.Url, "post", "p", 1) + "\n\n### 正文\n\n" + fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", content, picContent, hotCommentString, commentString)
-		//log.Println("articleContent:", articleContent)
+		referUrl := strings.Replace(article.Url, "post", "p", 1)
+		articleContent := fmt.Sprintf("## %s\n\n### Refer\n\n%s\n\n### 正文\n\n%s\n\n%s",
+			article.Name, referUrl, content, picContent)
+
+		if disableComment {
+			commentString, hotCommentString := GetPostComment(article.Url, authToken)
+			articleContent = fmt.Sprintf("%s\n\n%s\n\n%s", articleContent, hotCommentString, commentString)
+		}
+
 		if err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm); err != nil {
 			return err
 		}
+	} else {
+		log.Printf("File exists: %s", filePath)
 	}
 	return nil
 }

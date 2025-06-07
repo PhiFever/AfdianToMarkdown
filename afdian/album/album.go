@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cast"
 )
 
-func GetAlbums(authorName string, cookieString string, authToken string) error {
+func GetAlbums(authorName string, cookieString string, authToken string, disableComment bool) error {
 	albumHost, _ := url.JoinPath(afdian.HostUrl, "a", authorName, "album")
 	log.Println("albumHost:", albumHost)
 	userId := afdian.GetAuthorId(authorName, albumHost, cookieString)
@@ -23,7 +23,7 @@ func GetAlbums(authorName string, cookieString string, authToken string) error {
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
 		log.Println("Find album: ", album.AlbumName)
-		err := GetAlbum(authorName, cookieString, authToken, album, converter)
+		err := GetAlbum(authorName, cookieString, authToken, album, disableComment, converter)
 		if err != nil {
 			return err
 		}
@@ -32,7 +32,7 @@ func GetAlbums(authorName string, cookieString string, authToken string) error {
 	return nil
 }
 
-func GetAlbum(authorName string, cookieString string, authToken string, album afdian.Album, converter *md.Converter) error {
+func GetAlbum(authorName string, cookieString string, authToken string, album afdian.Album, disableComment bool, converter *md.Converter) error {
 	//获取作品集的所有文章
 	//album.AlbumUrl会类似于 https://afdian.com/album/xyz
 	re := regexp.MustCompile("^.*/album/")
@@ -45,9 +45,8 @@ func GetAlbum(authorName string, cookieString string, authToken string, album af
 
 	for i, post := range albumPostList {
 		filePath := path.Join(utils.GetExecutionPath(), authorName, album.AlbumName, cast.ToString(i)+"_"+post.Name+".md")
-		log.Println("Saving file:", filePath)
 
-		if err := afdian.SavePostIfNotExist(filePath, post, authToken, converter); err != nil {
+		if err := afdian.SavePostIfNotExist(filePath, post, authToken, disableComment, converter); err != nil {
 			return err
 		}
 	}
