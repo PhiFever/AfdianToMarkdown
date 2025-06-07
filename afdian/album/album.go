@@ -15,15 +15,15 @@ import (
 	"github.com/spf13/cast"
 )
 
-func GetAlbums(authorName string, cookieString string, authToken string, disableComment bool) error {
-	albumHost, _ := url.JoinPath(afdian.HostUrl, "a", authorName, "album")
+func GetAlbums(authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
+	albumHost, _ := url.JoinPath(afdian.HostUrl, "a", authorUrlSlug, "album")
 	log.Println("albumHost:", albumHost)
-	userId := afdian.GetAuthorId(authorName, albumHost, cookieString)
+	userId := afdian.GetAuthorId(authorUrlSlug, albumHost, cookieString)
 	albumList := afdian.GetAlbumList(userId, albumHost, cookieString)
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
 		log.Println("Find album: ", album.AlbumName)
-		err := GetAlbum(authorName, cookieString, authToken, album, disableComment, converter)
+		err := GetAlbum(cookieString, authToken, album, disableComment, converter)
 		if err != nil {
 			return err
 		}
@@ -32,19 +32,27 @@ func GetAlbums(authorName string, cookieString string, authToken string, disable
 	return nil
 }
 
-func GetAlbum(authorName string, cookieString string, authToken string, album afdian.Album, disableComment bool, converter *md.Converter) error {
+func GetAlbum(cookieString string, authToken string, album afdian.Album, disableComment bool, converter *md.Converter) error {
 	//获取作品集的所有文章
 	//album.AlbumUrl会类似于 https://afdian.com/album/xyz
 	re := regexp.MustCompile("^.*/album/")
 	albumId := re.ReplaceAllString(album.AlbumUrl, "")
-	albumPostList := afdian.GetAlbumPostList(albumId, cookieString)
+	authorUrlSlug, albumName, albumPostList := afdian.GetAlbumPostList(albumId, cookieString)
 	time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
-	if err := os.MkdirAll(path.Join(authorName, album.AlbumName), os.ModePerm); err != nil {
-		return fmt.Errorf("create album dir error: %v", err)
+
+	albumSaveDir := path.Join(authorUrlSlug, func() string {
+		//判断从albums命令进入还是从album命令进入
+		if album.AlbumName != "" {
+			return album.AlbumName
+		}
+		return albumName
+	}())
+	if err := os.MkdirAll(albumSaveDir, os.ModePerm); err != nil {
+		return fmt.Errorf("create album dir <%s> error: %v", albumSaveDir, err)
 	}
 
 	for i, post := range albumPostList {
-		filePath := path.Join(utils.GetExecutionPath(), authorName, album.AlbumName, cast.ToString(i)+"_"+post.Name+".md")
+		filePath := path.Join(utils.GetExecutionPath(), albumSaveDir, cast.ToString(i)+"_"+post.Name+".md")
 
 		if err := afdian.SavePostIfNotExist(filePath, post, authToken, disableComment, converter); err != nil {
 			return err

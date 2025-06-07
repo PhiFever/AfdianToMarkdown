@@ -147,8 +147,8 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 
 // GetAuthorId 获取作者的ID
 // refer: https://afdian.com/a/Alice
-func GetAuthorId(authorName string, referer string, cookieString string) (authorId string) {
-	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", HostUrl, authorName)
+func GetAuthorId(authorUrlSlug string, referer string, cookieString string) (authorId string) {
+	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", HostUrl, authorUrlSlug)
 	body := NewRequestGet(apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", body)
 	authorId = gjson.GetBytes(body, "data.user.user_id").String()
@@ -207,12 +207,14 @@ func GetAlbumList(userId string, referer string, cookieString string) (albumList
 	return albumList
 }
 
-func GetAlbumPostList(albumId string, cookieString string) (albumPostList []Post) {
+func GetAlbumPostList(albumId string, cookieString string) (authorUrlSlug string, albumName string, albumPostList []Post) {
 	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", HostUrl, albumId)
 	referer := fmt.Sprintf("%s/album/%s", HostUrl, albumId)
 
 	postCountBodyText := NewRequestGet(postCountApiUrl, cookieString, referer)
+	albumName = gjson.GetBytes(postCountBodyText, "data.album.title").String()
 	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
+	authorUrlSlug = gjson.GetBytes(postCountBodyText, "data.album.user.url_slug").String()
 
 	var i int64
 	for i = 0; i < postCount; i += 10 {
@@ -237,7 +239,7 @@ func GetAlbumPostList(albumId string, cookieString string) (albumPostList []Post
 		})
 	}
 
-	return albumPostList
+	return authorUrlSlug, albumName, albumPostList
 }
 
 // getPostContent 获取文章正文内容
@@ -326,7 +328,7 @@ func SavePostIfNotExist(filePath string, article Post, authToken string, disable
 		articleContent := fmt.Sprintf("## %s\n\n### Refer\n\n%s\n\n### 正文\n\n%s\n\n%s",
 			article.Name, referUrl, content, picContent)
 
-		if disableComment {
+		if !disableComment {
 			commentString, hotCommentString := GetPostComment(article.Url, authToken)
 			articleContent = fmt.Sprintf("%s\n\n%s\n\n%s", articleContent, hotCommentString, commentString)
 		}

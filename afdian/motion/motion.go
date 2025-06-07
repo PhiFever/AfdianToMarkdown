@@ -19,10 +19,10 @@ const (
 )
 
 // GetMotions 获取作者的所有作品
-func GetMotions(authorName string, cookieString string, authToken string, disableComment bool) error {
-	authorHost, _ := url.JoinPath(afdian.HostUrl, "a", authorName)
+func GetMotions(authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
+	authorHost, _ := url.JoinPath(afdian.HostUrl, "a", authorUrlSlug)
 	//创建作者文件夹
-	if err := os.MkdirAll(path.Join(authorName, authorDir), os.ModePerm); err != nil {
+	if err := os.MkdirAll(path.Join(authorUrlSlug, authorDir), os.ModePerm); err != nil {
 		return fmt.Errorf("create author dir error: %v", err)
 	}
 	log.Println("authorHost:", authorHost)
@@ -32,7 +32,7 @@ func GetMotions(authorName string, cookieString string, authToken string, disabl
 	var postList []afdian.Post
 	for {
 		//获取作者作品列表
-		subArticleList, publishSn := afdian.GetMotionUrlList(authorName, cookieString, prevPublishSn)
+		subArticleList, publishSn := afdian.GetMotionUrlList(authorUrlSlug, cookieString, prevPublishSn)
 		postList = append(postList, subArticleList...)
 		prevPublishSn = publishSn
 		if publishSn == "" {
@@ -45,7 +45,7 @@ func GetMotions(authorName string, cookieString string, authToken string, disabl
 
 	converter := md.NewConverter("", true, nil)
 	for i, article := range postList {
-		filePath := path.Join(utils.GetExecutionPath(), authorName, authorDir, cast.ToString(i)+"_"+article.Name+".md")
+		filePath := path.Join(utils.GetExecutionPath(), authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
 		if err := afdian.SavePostIfNotExist(filePath, article, authToken, disableComment, converter); err != nil {
 			return err
 		}

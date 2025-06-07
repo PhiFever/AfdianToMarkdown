@@ -29,9 +29,9 @@ func getAlbumUrl(AlbumId string) string {
 
 func TestGetAuthorId(t *testing.T) {
 	type args struct {
-		authorName   string
-		referer      string
-		cookieString string
+		authorUrlSlug string
+		referer       string
+		cookieString  string
 	}
 	tests := []struct {
 		name string
@@ -41,24 +41,24 @@ func TestGetAuthorId(t *testing.T) {
 		{
 			name: "q9adg",
 			args: args{
-				authorName:   "q9adg",
-				referer:      HostUrl,
-				cookieString: cookieString,
+				authorUrlSlug: "q9adg",
+				referer:       HostUrl,
+				cookieString:  cookieString,
 			},
 			want: q9adgId,
 		},
 		{name: "深海巨狗",
 			args: args{
-				authorName:   "Arabian_nights",
-				referer:      HostUrl,
-				cookieString: cookieString,
+				authorUrlSlug: "Arabian_nights",
+				referer:       HostUrl,
+				cookieString:  cookieString,
 			},
 			want: "d7c0ebe2c83911ea8ad552540025c377",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, GetAuthorId(tt.args.authorName, tt.args.referer, tt.args.cookieString), "GetAuthorId(%v, %v, %v)", tt.args.authorName, tt.args.referer, tt.args.cookieString)
+			assert.Equalf(t, tt.want, GetAuthorId(tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString), "GetAuthorId(%v, %v, %v)", tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
 		})
 	}
 }

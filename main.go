@@ -6,6 +6,7 @@ import (
 	"AfdianToMarkdown/afdian/motion"
 	"AfdianToMarkdown/utils"
 	"context"
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v3"
 	"log"
@@ -15,7 +16,7 @@ import (
 
 var (
 	afdianHost              string
-	authorName              string
+	authorUrlSlug           string
 	albumUrl                string
 	cookieString, authToken string
 	disableComment          bool
@@ -36,7 +37,7 @@ func main() {
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.com", Usage: "主站域名，如访问不通可自行更改"},
-			&cli.BoolFlag{Name: "disable_comment", Destination: &disableComment, Value: false, Usage: "是否禁用评论下载，默认不禁用"},
+			&cli.BoolFlag{Name: "disable_comment", Destination: &disableComment, Value: false, Usage: "为true时不下载评论"},
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 			// 在这里可以根据需要做全局参数的预处理
@@ -57,34 +58,31 @@ func main() {
 				Name:  "motions",
 				Usage: "下载指定作者的所有动态",
 				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorName, Value: "", Usage: "待下载的作者id"},
+					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorUrlSlug, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return motion.GetMotions(authorName, cookieString, authToken, disableComment)
+					return motion.GetMotions(authorUrlSlug, cookieString, authToken, disableComment)
 				},
 			},
-			//{
-			//	Name:  "album",
-			//	Usage: "下载指定的作品集",
-			//	Flags: []cli.Flag{
-			//		&cli.StringFlag{Name: "url", Aliases: []string{"u"}, Destination: &albumUrl, Value: "", Usage: "待下载的作品集url"},
-			//	},
-			//	Action: func(ctx context.Context, cmd *cli.Command) error {
-			//		re := regexp.MustCompile("^.*/album/")
-			//		albumId := re.ReplaceAllString(albumUrl, "")
-			//		albumPostList := afdian.GetAlbumPostList(albumId, cookieString)
-			//		converter := md.NewConverter("", true, nil)
-			//		return album.GetAlbum(authorName, cookieString, authToken)
-			//	},
-			//},
+			{
+				Name:  "album",
+				Usage: "下载指定的作品集",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "url", Aliases: []string{"u"}, Destination: &albumUrl, Value: "", Usage: "待下载的作品集url"},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					converter := md.NewConverter("", true, nil)
+					return album.GetAlbum(cookieString, authToken, afdian.Album{AlbumName: "", AlbumUrl: albumUrl}, disableComment, converter)
+				},
+			},
 			{
 				Name:  "albums",
 				Usage: "下载指定作者的所有作品集",
 				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorName, Value: "", Usage: "待下载的作者id"},
+					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorUrlSlug, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return album.GetAlbums(authorName, cookieString, authToken, disableComment)
+					return album.GetAlbums(authorUrlSlug, cookieString, authToken, disableComment)
 				},
 			},
 			{
