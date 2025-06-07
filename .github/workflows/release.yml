@@ -1,20 +1,16 @@
 name: Release
 
 on:
-  pull_request:
   push:
     tags:
-      - 'v*'  # trig on push tags vX.X.X
-  workflow_dispatch:  # allow to trig manually
+      - 'v*'
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: GoReleaser build
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,10 +23,9 @@ jobs:
           go-version: stable
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v5
         with:
-          distribution: goreleaser
-          version: "~> v2"
+          version: latest
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
