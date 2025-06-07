@@ -1,44 +1,50 @@
 project_name: AfdianToMarkdown
 
+before:
+  hooks:
+    - go mod tidy
+
 builds:
-  - id: unix
-    main: ./main.go
+  - env:
+      - CGO_ENABLED=0
     goos:
       - linux
+      - windows
       - darwin
     goarch:
       - amd64
-      - arm64
-    ldflags: "-s -w"
-    env:
-      - CGO_ENABLED=0
-  - id: windows
-    main: ./main.go
-    goos:
-      - windows
-    goarch:
-      - amd64
-    ldflags: "-s -w"
-    env:
-      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+    binary: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if eq .Os "windows" }}.exe{{ end }}'
+    no_unique_dist_dir: true
 
 archives:
-  - id: unix_archive
-    builds:
-      - unix
-    format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files:
-      - LICENSE
-  - id: windows_archive
-    builds:
-      - windows
-    format: zip
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files:
-      - LICENSE
+  - format: binary
+    name_template: '{{ .Binary }}'
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
 
 release:
   github:
-    owner: PhiFever
-    name: AfdianToMarkdown
+    owner: '{{ .Env.GITHUB_REPOSITORY_OWNER }}'
+    name: '{{ .ProjectName }}'
+  prerelease: auto
+  mode: append
+  header: |
+    ## Release {{ .Tag }}
+    
+    ### Downloads
+  footer: |
+    ### Checksums
+    
+    Please verify the SHA256 checksums after downloading.
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'

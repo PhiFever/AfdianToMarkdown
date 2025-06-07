@@ -19,6 +19,9 @@
 **注意主站域名可能需要手动指定（默认为afdian.com)**
 
 ### 构建
+
+如果你不需要对源码进行开发，请跳至下一节。
+
 - 参见`Makefile`
 
 - 本程序在go1.23下构建，如无编译环境，也可到release页面自行下载对应的可执行文件
@@ -51,24 +54,36 @@ $ .\AfdianToMarkdown.exe -h
 #### 下载作者的所有动态
 
 ```shell
-AfdianToMarkdown.exe motions --host="ifdian.net" -au "user_id" 
+.\AfdianToMarkdown.exe motions --host="ifdian.net" -au "user_id" 
 ```
 
 #### 下载作者所有的作品集
 
 ```shell
-AfdianToMarkdown.exe albums -au "user_id" 
+.\AfdianToMarkdown.exe albums -au "user_id" 
 ```
 
 #### 更新所有已经下载的作者的动态和作品集
 注：不会覆盖已经下载的文件，所以也不会更新评论。可以通过删除文件来强制更新
 
 ```shell
-AfdianToMarkdown.exe --host="ifdian.net" update
+.\AfdianToMarkdown.exe --host="ifdian.net" update
+```
+
+#### 下载任意作者的单个作品集
+
+```shell
+.\AfdianToMarkdown.exe album -u https://afdian.com/album/aaa
 ```
 
 ### 更新日志
-### v0.4.0
+
+#### v0.5.0
+
+1. 添加了下载任意作者的单个作品集的功能
+2. 添加在下载时不下载评论区的控制参数
+
+#### v0.4.0
 增加了对于含图片作品集的支持
 
 #### v0.3.0
