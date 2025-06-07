@@ -1,12 +1,13 @@
 package afdian
 
 import (
+	"AfdianToMarkdown/logger"
 	"AfdianToMarkdown/utils"
 	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
-	"log"
+	"golang.org/x/exp/slog"
 	"testing"
 )
 
@@ -17,9 +18,10 @@ var cookieString, authToken string
 func init() {
 	//localPath, _ := os.Getwd()
 	//执行测试前，先设置cookie路径为实际本地路径
+	slog.SetDefault(logger.SetupLogger())
 	utils.CookiePath = `D:\MyProject\Golang\AfdianToMarkdown\cookies.json`
 	SetHostUrl("afdian.com")
-	log.Println("cookiePath:", utils.CookiePath)
+	slog.Info("cookiePath:", "path", utils.CookiePath)
 	cookieString, authToken = GetCookies()
 }
 
@@ -135,15 +137,41 @@ func TestGetAlbumArticleList(t *testing.T) {
 		authToken string
 	}
 	tests := []struct {
-		name string
-		args args
-		want []Post
+		name          string
+		args          args
+		wantUrlSlug   string
+		wantAlbumName string
+		wantPost      []Post
 	}{
-		// TODO: Add test cases.
+
+		{
+			name: "阿牟AMFIG",
+			args: args{
+				albumId:   "aa82d81c88f711edb68f52540025c377",
+				authToken: authToken,
+			},
+			wantUrlSlug:   "AMFIG",
+			wantAlbumName: "版本更新记录",
+			wantPost: []Post{
+				{
+					Name:     "罗德里[2.1.10]已发布(2025-06-01)",
+					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/527d91b23e9311f0bddb52540025c377",
+					Pictures: []string(nil),
+				},
+				{
+					Name:     "罗德里[2.1.9]已发布(2025-05-26)",
+					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/b07905ee3a0611f0ba0d52540025c377",
+					Pictures: []string{"https://pic1.afdiancdn.com/user/104acec41aa411edbf6152540025c377/common/6cdc5f7c0733550298ad0bb650cf029e_w1280_h1280_s14.png"},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, GetAlbumPostList(tt.args.albumId, tt.args.authToken), "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
+			gotUrlSlug, gotAlbumName, gotPost := GetAlbumPostList(tt.args.albumId, tt.args.authToken)
+			assert.Equalf(t, tt.wantUrlSlug, gotUrlSlug, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
+			assert.Equalf(t, tt.wantAlbumName, gotAlbumName, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
+			assert.Subset(t, gotPost, tt.wantPost, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
 		})
 	}
 }

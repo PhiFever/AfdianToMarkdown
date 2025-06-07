@@ -4,7 +4,7 @@ import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/utils"
 	"fmt"
-	"log"
+	"golang.org/x/exp/slog"
 	"net/url"
 	"os"
 	"path"
@@ -17,12 +17,12 @@ import (
 
 func GetAlbums(authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
 	albumHost, _ := url.JoinPath(afdian.HostUrl, "a", authorUrlSlug, "album")
-	log.Println("albumHost:", albumHost)
+	slog.Info("albumHost:", albumHost)
 	userId := afdian.GetAuthorId(authorUrlSlug, albumHost, cookieString)
 	albumList := afdian.GetAlbumList(userId, albumHost, cookieString)
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
-		log.Println("Find album: ", album.AlbumName)
+		slog.Info("Find album: ", album.AlbumName)
 		err := GetAlbum(cookieString, authToken, album, disableComment, converter)
 		if err != nil {
 			return err
@@ -40,13 +40,7 @@ func GetAlbum(cookieString string, authToken string, album afdian.Album, disable
 	authorUrlSlug, albumName, albumPostList := afdian.GetAlbumPostList(albumId, cookieString)
 	time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
 
-	albumSaveDir := path.Join(authorUrlSlug, func() string {
-		//判断从albums命令进入还是从album命令进入
-		if album.AlbumName != "" {
-			return album.AlbumName
-		}
-		return albumName
-	}())
+	albumSaveDir := path.Join(authorUrlSlug, albumName)
 	if err := os.MkdirAll(albumSaveDir, os.ModePerm); err != nil {
 		return fmt.Errorf("create album dir <%s> error: %v", albumSaveDir, err)
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/exp/slog"
 	"io"
 	"log"
 	"net/http"
@@ -64,22 +65,23 @@ func SetHostUrl(afdianHost string) {
 
 // ReadCookiesFromFile 从文件中读取 Cookies
 func ReadCookiesFromFile(filePath string) []Cookie {
-	var cookies []Cookie
-
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(-1)
 	}
 	defer file.Close()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(-1)
 	}
 
-	err = json.Unmarshal(data, &cookies)
-	if err != nil {
-		log.Fatal(err)
+	var cookies []Cookie
+	if err := json.Unmarshal(data, &cookies); err != nil {
+		slog.Error(err.Error())
+		os.Exit(-1)
 	}
 
 	return cookies
@@ -104,7 +106,7 @@ func GetAuthTokenString(cookies []Cookie) (authTokenString string) {
 func GetCookies() (cookieString string, authToken string) {
 	cookies := ReadCookiesFromFile(utils.CookiePath)
 	cookieString = GetCookiesString(cookies)
-	//log.Println("cookieString:", cookieString)
+	//slog.Info("cookieString:", cookieString)
 	authToken = GetAuthTokenString(cookies)
 	return cookieString, authToken
 }
@@ -140,7 +142,7 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 		ToBytesBuffer(&body).
 		Fetch(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 	}
 	return body.Bytes()
 }
@@ -161,7 +163,7 @@ func GetMotionUrlList(userName string, cookieString string, prevPublishSn string
 	userReferer := fmt.Sprintf("%s/a/%s", HostUrl, userName)
 	userId := GetAuthorId(userName, userReferer, cookieString)
 	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", HostUrl, userId, prevPublishSn)
-	log.Println("Get publish_sn apiUrl:", apiUrl)
+	slog.Info("Get publish_sn apiUrl:", apiUrl)
 
 	body := NewRequestGet(apiUrl, cookieString, userReferer)
 	//log.Printf("%s\n", body)
@@ -183,7 +185,7 @@ func GetMotionUrlList(userName string, cookieString string, prevPublishSn string
 	})
 
 	nextPublishSn = gjson.GetBytes(body, fmt.Sprintf("data.list.%d.publish_sn", len(authorArticleList)-1)).String()
-	log.Println("nextPublishSn:", nextPublishSn)
+	slog.Info("nextPublishSn:", nextPublishSn)
 	return authorArticleList, nextPublishSn
 }
 
@@ -246,7 +248,7 @@ func GetAlbumPostList(albumId string, cookieString string) (authorUrlSlug string
 func getPostContent(articleUrl string, authToken string, converter *md.Converter) string {
 	//在album内的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id={album_id}
 	//在album外的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id=
-	log.Println("articleUrl:", articleUrl)
+	slog.Info("articleUrl:", "url", articleUrl)
 	var apiUrl string
 	splitUrl := strings.Split(articleUrl, "/")
 	if strings.Contains(articleUrl, "album") {
@@ -254,17 +256,17 @@ func getPostContent(articleUrl string, authToken string, converter *md.Converter
 	} else {
 		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", HostUrl, splitUrl[len(splitUrl)-1])
 	}
-	log.Println("Get article content apiUrl:", apiUrl)
+	slog.Info("Get article content apiUrl:", "url", apiUrl)
 	body := NewRequestGet(apiUrl, authToken, articleUrl)
-	//log.Println("body: ", string(body))
+	//slog.Info("body: ", string(body))
 	articleContent := gjson.GetBytes(body, "data.post.content").String()
-	//log.Println("articleContent: ", articleContent)
+	//slog.Info("articleContent: ", articleContent)
 
 	markdown, err := converter.ConvertString(articleContent)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Error converting HTML to Markdown:", err)
 	}
-	//log.Println(markdown)
+	//slog.Info(markdown)
 
 	return markdown
 }
@@ -277,7 +279,7 @@ func GetPostComment(articleUrl string, cookieString string) (commentString strin
 	splitUrl := strings.Split(articleUrl, "/")
 	postId := splitUrl[len(splitUrl)-1]
 	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", HostUrl, postId)
-	log.Println("Get article comment apiUrl:", apiUrl)
+	slog.Info("Get article comment apiUrl:", "url", apiUrl)
 
 	body := NewRequestGet(apiUrl, cookieString, articleUrl)
 	commentJson := gjson.GetBytes(body, "data.list")
@@ -316,7 +318,7 @@ func SavePostIfNotExist(filePath string, article Post, authToken string, disable
 	_, err := os.Stat(filePath)
 	fileExists := err == nil || os.IsExist(err)
 	if !fileExists {
-		log.Println("Saving file:", filePath)
+		slog.Info("Saving file:", "path", filePath)
 		content := getPostContent(article.Url, authToken, converter)
 		//TODO:不支持图文混排
 		picContent, err := getPictures(filePath, article)

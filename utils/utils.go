@@ -1,10 +1,8 @@
 package utils
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"log"
+	"golang.org/x/exp/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,44 +16,21 @@ const (
 
 var CookiePath = path.Join(GetExecutionPath(), `cookies.json`)
 
-// ReadListFile 用于按行读取列表文件，返回一个字符串切片
-func ReadListFile(filePath string) ([]string, error) {
-	var contentList []string
-	file, err := os.Open(filePath)
-	if err != nil {
-		return contentList, err
-	}
-	defer func(file *os.File) {
-		if err := file.Close(); err != nil {
-			panic(err)
-		}
-	}(file)
-
-	var fileLine string
-	for {
-		_, err := fmt.Fscanln(file, &fileLine)
-		if err != nil {
-			break
-		}
-		contentList = append(contentList, fileLine)
-	}
-	return contentList, nil
-}
-
-func GetExecutionTime(startTime time.Time, endTime time.Time) string {
-	//按时:分:秒格式输出
+func GetExecutionTime(startTime, endTime time.Time) string {
 	duration := endTime.Sub(startTime)
 	hours := int(duration.Hours())
 	minutes := int(duration.Minutes()) % 60
-	seconds := int(duration.Seconds()) % 60
+	seconds := duration.Seconds() - float64(hours*3600+minutes*60)
 
+	result := ""
 	if hours > 0 {
-		return fmt.Sprintf("%d时%d分%d秒", hours, minutes, seconds)
-	} else if minutes > 0 {
-		return fmt.Sprintf("%d分%d秒", minutes, seconds)
-	} else {
-		return fmt.Sprintf("%d秒", seconds)
+		result += fmt.Sprintf("%dh", hours)
 	}
+	if minutes > 0 {
+		result += fmt.Sprintf("%dmin", minutes)
+	}
+	result += fmt.Sprintf("%.2fs", seconds)
+	return result
 }
 
 func ToSafeFilename(in string) string {
@@ -74,19 +49,6 @@ func ToSafeFilename(in string) string {
 	)
 	rt := rp.Replace(in)
 	return rt
-}
-
-func ToJSON(JSONString interface{}) string {
-	b, err := json.Marshal(JSONString)
-	if err != nil {
-		return fmt.Sprintf("%+v", JSONString)
-	}
-	var out bytes.Buffer
-	err = json.Indent(&out, b, "", "    ")
-	if err != nil {
-		return fmt.Sprintf("%+v", JSONString)
-	}
-	return out.String()
 }
 
 // CheckAndListAuthors 通过检查程序目录下是否有二级文件夹 motions 来获取所有的作者名
@@ -123,7 +85,8 @@ func CheckAndListAuthors() ([]string, error) {
 func GetExecutionPath() string {
 	ex, err := os.Executable()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(-1)
 	}
 	return filepath.Dir(ex)
 }

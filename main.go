@@ -4,12 +4,12 @@ import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/afdian/album"
 	"AfdianToMarkdown/afdian/motion"
+	"AfdianToMarkdown/logger"
 	"AfdianToMarkdown/utils"
 	"context"
 	md "github.com/JohannesKaufmann/html-to-markdown"
-	"github.com/fatih/color"
 	"github.com/urfave/cli/v3"
-	"log"
+	"golang.org/x/exp/slog"
 	"os"
 	"time"
 )
@@ -23,17 +23,17 @@ var (
 )
 
 func main() {
-	successColor := color.New(color.Bold, color.FgGreen).FprintlnFunc()
-	failColor := color.New(color.Bold, color.FgRed).FprintlnFunc()
+	slog.SetDefault(logger.SetupLogger())
 	//记录开始时间
 	startTime := time.Now()
 	cmd := &cli.Command{
 		Name:  "AfdianToMarkdown",
 		Usage: "爱发电下载器，支持按作者或按作品集爬取数据\nGithub Link: https://github.com/PhiFever/AfdianToMarkdown",
 		UsageText: "eg:\n\tAfdianToMarkdown.exe motions -au Alice \n" +
+			"eg:\n\tAfdianToMarkdown.exe album -u https://afdian.com/album/aaa\n" +
 			"eg:\n\tAfdianToMarkdown.exe albums -au Alice \n" +
 			"eg:\n\tAfdianToMarkdown.exe update",
-		Version:         "0.4.0",
+		Version:         "0.5.0",
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.com", Usage: "主站域名，如访问不通可自行更改"},
@@ -50,7 +50,7 @@ func main() {
 			//记录结束时间
 			endTime := time.Now()
 			//计算执行时间，单位为秒
-			successColor(os.Stdout, "处理完毕，共耗时:", utils.GetExecutionTime(startTime, endTime))
+			slog.Info("处理完毕", "time cost", utils.GetExecutionTime(startTime, endTime))
 			return nil
 		},
 		Commands: []*cli.Command{
@@ -94,7 +94,7 @@ func main() {
 						return err
 					}
 					for _, author := range authors {
-						log.Println("find exist author: ", author)
+						slog.Info("find exist author: ", author)
 						if err := motion.GetMotions(author, cookieString, authToken, disableComment); err != nil {
 							return err
 						}
@@ -113,6 +113,6 @@ func main() {
 		},
 	}
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		failColor(os.Stderr, err)
+		slog.Error(err.Error())
 	}
 }

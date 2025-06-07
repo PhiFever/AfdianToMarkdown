@@ -118,12 +118,6 @@ else
 endif
 	@echo "Clean completed!"
 
-# Alternative clean using Go (more cross-platform)
-clean-go:
-	@echo "Cleaning using Go..."
-	go run -c "import os; os.RemoveAll('./build'); os.RemoveAll('./release')" 2>/dev/null || echo "Go clean failed, using system commands"
-	$(MKDIR_CMD) $(BUILD_DIR)/windows $(BUILD_DIR)/linux $(BUILD_DIR)/macos $(RELEASE_DIR)
-
 # Show detected OS
 info:
 	@echo "Detected OS: $(DETECTED_OS)"

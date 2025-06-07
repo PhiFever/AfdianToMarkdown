@@ -4,7 +4,7 @@ import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/utils"
 	"fmt"
-	"log"
+	"golang.org/x/exp/slog"
 	"net/url"
 	"os"
 	"path"
@@ -25,7 +25,7 @@ func GetMotions(authorUrlSlug string, cookieString string, authToken string, dis
 	if err := os.MkdirAll(path.Join(authorUrlSlug, authorDir), os.ModePerm); err != nil {
 		return fmt.Errorf("create author dir error: %v", err)
 	}
-	log.Println("authorHost:", authorHost)
+	slog.Info("authorHost:", authorHost)
 
 	//获取作者作品列表
 	prevPublishSn := ""
@@ -40,8 +40,8 @@ func GetMotions(authorUrlSlug string, cookieString string, authToken string, dis
 		}
 		time.Sleep(time.Millisecond * time.Duration(30))
 	}
-	//log.Println("postList:", utils.ToJSON(postList))
-	log.Println("postList length:", len(postList))
+	//slog.Info("postList:", utils.ToJSON(postList))
+	slog.Info("postList length:", len(postList))
 
 	converter := md.NewConverter("", true, nil)
 	for i, article := range postList {
