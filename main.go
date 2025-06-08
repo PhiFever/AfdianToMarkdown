@@ -94,7 +94,7 @@ func main() {
 						return err
 					}
 					for _, author := range authors {
-						slog.Info("find exist author: ", author)
+						slog.Info("Find exist author: ", "authorName", author)
 						if err := motion.GetMotions(author, cookieString, authToken, disableComment); err != nil {
 							return err
 						}

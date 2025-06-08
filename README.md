@@ -64,7 +64,8 @@ $ .\AfdianToMarkdown.exe -h
 ```
 
 #### 更新所有已经下载的作者的动态和作品集
-注：不会覆盖已经下载的文件，所以也不会更新评论。可以通过删除文件来强制更新
+1. 需要对应的作者目录下具有`motions`目录
+2. 不会覆盖已经下载的文件，所以也不会更新评论。可以通过删除文件来强制更新
 
 ```shell
 .\AfdianToMarkdown.exe --host="ifdian.net" update
