@@ -64,27 +64,24 @@ func SetHostUrl(afdianHost string) {
 }
 
 // ReadCookiesFromFile 从文件中读取 Cookies
-func ReadCookiesFromFile(filePath string) []Cookie {
+func ReadCookiesFromFile(filePath string) ([]Cookie, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(-1)
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(-1)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	var cookies []Cookie
 	if err := json.Unmarshal(data, &cookies); err != nil {
-		slog.Error(err.Error())
-		os.Exit(-1)
+		return nil, fmt.Errorf("failed to unmarshal cookies: %w", err)
 	}
 
-	return cookies
+	return cookies, nil
 }
 
 func GetCookiesString(cookies []Cookie) (cookiesString string) {
@@ -104,7 +101,11 @@ func GetAuthTokenString(cookies []Cookie) (authTokenString string) {
 }
 
 func GetCookies() (cookieString string, authToken string) {
-	cookies := ReadCookiesFromFile(utils.CookiePath)
+	cookies, err := ReadCookiesFromFile(utils.CookiePath)
+	if err != nil {
+		slog.Error("Failed to read cookies from file:", "error", err)
+		os.Exit(-1)
+	}
 	cookieString = GetCookiesString(cookies)
 	//slog.Info("cookieString:", cookieString)
 	authToken = GetAuthTokenString(cookies)
@@ -163,7 +164,7 @@ func GetMotionUrlList(userName string, cookieString string, prevPublishSn string
 	userReferer := fmt.Sprintf("%s/a/%s", HostUrl, userName)
 	userId := GetAuthorId(userName, userReferer, cookieString)
 	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", HostUrl, userId, prevPublishSn)
-	slog.Info("Get publish_sn apiUrl:", apiUrl)
+	slog.Info("Get publish_sn apiUrl:", "url", apiUrl)
 
 	body := NewRequestGet(apiUrl, cookieString, userReferer)
 	//log.Printf("%s\n", body)
@@ -185,7 +186,7 @@ func GetMotionUrlList(userName string, cookieString string, prevPublishSn string
 	})
 
 	nextPublishSn = gjson.GetBytes(body, fmt.Sprintf("data.list.%d.publish_sn", len(authorArticleList)-1)).String()
-	slog.Info("nextPublishSn:", nextPublishSn)
+	slog.Info("nextPublishSn:", "sn", nextPublishSn)
 	return authorArticleList, nextPublishSn
 }
 

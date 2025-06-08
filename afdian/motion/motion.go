@@ -25,7 +25,7 @@ func GetMotions(authorUrlSlug string, cookieString string, authToken string, dis
 	if err := os.MkdirAll(path.Join(authorUrlSlug, authorDir), os.ModePerm); err != nil {
 		return fmt.Errorf("create author dir error: %v", err)
 	}
-	slog.Info("authorHost:", authorHost)
+	slog.Info("作者主页", "authorHostUrl", authorHost)
 
 	//获取作者作品列表
 	prevPublishSn := ""

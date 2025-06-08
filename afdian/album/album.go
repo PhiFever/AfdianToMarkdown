@@ -17,12 +17,12 @@ import (
 
 func GetAlbums(authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
 	albumHost, _ := url.JoinPath(afdian.HostUrl, "a", authorUrlSlug, "album")
-	slog.Info("albumHost:", albumHost)
+	slog.Info("album列表页:", "albumHostUrl", albumHost)
 	userId := afdian.GetAuthorId(authorUrlSlug, albumHost, cookieString)
 	albumList := afdian.GetAlbumList(userId, albumHost, cookieString)
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
-		slog.Info("Find album: ", album.AlbumName)
+		slog.Info("Find album: ", "albumName", album.AlbumName)
 		err := GetAlbum(cookieString, authToken, album, disableComment, converter)
 		if err != nil {
 			return err
