@@ -14,7 +14,7 @@ const (
 	ImgDir = ".assets"
 )
 
-var CookiePath = path.Join(GetExecutionPath(), `cookies.json`)
+var CookiePath = path.Join(GetAppDataPath(), `cookies.json`)
 
 func GetExecutionTime(startTime, endTime time.Time) string {
 	duration := endTime.Sub(startTime)
@@ -57,7 +57,7 @@ func CheckAndListAuthors() ([]string, error) {
 	var folders []string
 
 	// 获取当前目录路径
-	currentDir := GetExecutionPath()
+	currentDir := GetAppDataPath()
 	//fmt.Println("CurrentDir: ", currentDir)
 
 	// 读取当前目录下的所有文件和文件夹
@@ -81,12 +81,36 @@ func CheckAndListAuthors() ([]string, error) {
 	return folders, nil
 }
 
-// GetExecutionPath 获取程序的实际执行目录
-func GetExecutionPath() string {
+// GetAppDataPath 根据 cookies.json 获取程序的实际执行目录
+// 若以 build 方式运行，找到可执行文件所在目录
+// 若以 go run 方式运行，找到当前工作目录
+func GetAppDataPath() string {
+	// 1. 尝试查找可执行文件目录
 	ex, err := os.Executable()
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(-1)
 	}
-	return filepath.Dir(ex)
+	execDir := filepath.Dir(ex)
+	if err == nil {
+		execCookie := filepath.Join(execDir, "cookies.json")
+		if _, err := os.Stat(execCookie); err == nil {
+			return execDir
+		}
+	}
+	// 2. 尝试查找当前工作目录
+	wd, err := os.Getwd()
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(-1)
+	}
+	if err == nil {
+		wdCookie := filepath.Join(wd, "cookies.json")
+		if _, err := os.Stat(wdCookie); err == nil {
+			return wd
+		}
+	}
+	slog.Error("Failed to find cookies.json in executable or working directory", "error", err)
+	os.Exit(-1)
+	return ""
 }
