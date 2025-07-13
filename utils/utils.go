@@ -110,7 +110,7 @@ func GetAppDataPath() string {
 			return wd
 		}
 	}
-	slog.Error("Failed to find cookies.json in executable or working directory", "error", err)
+	slog.Error("Failed to find cookies.json both in", "execDir", execDir, "workDir", filepath.Dir(wd))
 	os.Exit(-1)
 	return ""
 }
