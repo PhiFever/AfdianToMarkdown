@@ -46,7 +46,7 @@ func GetAlbum(cookieString string, authToken string, album afdian.Album, disable
 	}
 
 	for i, post := range albumPostList {
-		filePath := path.Join(utils.GetExecutionPath(), albumSaveDir, cast.ToString(i)+"_"+post.Name+".md")
+		filePath := path.Join(utils.GetAppDataPath(), albumSaveDir, cast.ToString(i)+"_"+post.Name+".md")
 
 		if err := afdian.SavePostIfNotExist(filePath, post, authToken, disableComment, converter); err != nil {
 			return err

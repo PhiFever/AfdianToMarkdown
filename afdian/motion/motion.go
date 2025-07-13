@@ -45,7 +45,7 @@ func GetMotions(authorUrlSlug string, cookieString string, authToken string, dis
 
 	converter := md.NewConverter("", true, nil)
 	for i, article := range postList {
-		filePath := path.Join(utils.GetExecutionPath(), authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
+		filePath := path.Join(utils.GetAppDataPath(), authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
 		if err := afdian.SavePostIfNotExist(filePath, article, authToken, disableComment, converter); err != nil {
 			return err
 		}
