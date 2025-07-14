@@ -3,6 +3,7 @@ project_name: AfdianToMarkdown
 before:
   hooks:
     - go mod tidy
+    - go mod download
 
 builds:
   - env:
@@ -13,29 +14,37 @@ builds:
       - darwin
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w
-    binary: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if eq .Os "windows" }}.exe{{ end }}'
-    no_unique_dist_dir: true
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
 
 archives:
-  - format: binary
-    name_template: '{{ .Binary }}'
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: 'checksums.txt'
   algorithm: sha256
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
 
 release:
   github:
     owner: '{{ .Env.GITHUB_REPOSITORY_OWNER }}'
     name: '{{ .ProjectName }}'
   prerelease: auto
-  mode: append
-  header: |
-    ## Release {{ .Tag }}
-    
-    ### Downloads
+  replace_existing_artifacts: true
+#  header: |
+#    ## Release {{ .Tag }}
+#
+#    ### Downloads
   footer: |
     ### Checksums
     
@@ -43,8 +52,18 @@ release:
 
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
       - '^docs:'
       - '^test:'
       - '^chore:'
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: Bug fixes
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Others
+      order: 999

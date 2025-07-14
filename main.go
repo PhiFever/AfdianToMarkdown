@@ -7,6 +7,7 @@ import (
 	"AfdianToMarkdown/logger"
 	"AfdianToMarkdown/utils"
 	"context"
+	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/urfave/cli/v3"
 	"golang.org/x/exp/slog"
@@ -20,6 +21,10 @@ var (
 	albumUrl                string
 	cookieString, authToken string
 	disableComment          bool
+
+	version string
+	commit  string
+	date    string
 )
 
 func main() {
@@ -33,7 +38,7 @@ func main() {
 			"eg:\n\tAfdianToMarkdown.exe album -u https://afdian.com/album/aaa\n" +
 			"eg:\n\tAfdianToMarkdown.exe albums -au Alice \n" +
 			"eg:\n\tAfdianToMarkdown.exe update",
-		Version:         "0.5.0",
+		Version:         fmt.Sprintf("version: %s, commit: %s, build date: %s", version, commit, date),
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.com", Usage: "主站域名，如访问不通可自行更改"},
