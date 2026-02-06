@@ -13,6 +13,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"golang.org/x/exp/slog"
 	"os"
+	"path"
 	"time"
 )
 
@@ -49,7 +50,7 @@ func main() {
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 			// 在这里可以根据需要做全局参数的预处理
-			cfg = config.NewConfig(afdianHost, utils.DefaultCookiePath())
+			cfg = config.NewConfig(afdianHost, path.Join(utils.GetAppDataPath(), "data"), utils.DefaultCookiePath())
 			cookieString, authToken = afdian.GetCookies(cfg.CookiePath)
 			return ctx, nil
 		},
@@ -97,7 +98,7 @@ func main() {
 				Name:  "update",
 				Usage: "更新所有已经下载的作者的动态和作品集",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					authors, err := utils.CheckAndListAuthors()
+					authors, err := utils.CheckAndListAuthors(cfg.DataDir)
 					if err != nil {
 						return err
 					}

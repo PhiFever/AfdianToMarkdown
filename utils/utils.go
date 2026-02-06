@@ -54,17 +54,13 @@ func ToSafeFilename(in string) string {
 	return rt
 }
 
-// CheckAndListAuthors 通过检查程序目录下是否有二级文件夹 motions 来获取所有的作者名
+// CheckAndListAuthors 通过检查 dataDir 下是否有二级文件夹 motions 来获取所有的作者名
 // 如果有，则返回所有一级文件夹名
-func CheckAndListAuthors() ([]string, error) {
+func CheckAndListAuthors(dataDir string) ([]string, error) {
 	var folders []string
 
-	// 获取当前目录路径
-	currentDir := GetAppDataPath()
-	//fmt.Println("CurrentDir: ", currentDir)
-
-	// 读取当前目录下的所有文件和文件夹
-	files, err := os.ReadDir(currentDir)
+	// 读取数据目录下的所有文件和文件夹
+	files, err := os.ReadDir(dataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +68,8 @@ func CheckAndListAuthors() ([]string, error) {
 	for _, file := range files {
 		//fmt.Println("file: ", file.Name())
 		if file.IsDir() {
-			// 检查是否存在二级文件夹 motion
-			motionPath := filepath.Join(currentDir, file.Name(), "motions")
+			// 检查是否存在二级文件夹 motions
+			motionPath := filepath.Join(dataDir, file.Name(), "motions")
 			if _, err := os.Stat(motionPath); err == nil {
 				folders = append(folders, file.Name())
 			}

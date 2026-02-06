@@ -3,7 +3,6 @@ package motion
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/config"
-	"AfdianToMarkdown/utils"
 	"fmt"
 	"golang.org/x/exp/slog"
 	"net/url"
@@ -23,7 +22,7 @@ const (
 func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
 	authorHost, _ := url.JoinPath(cfg.HostUrl, "a", authorUrlSlug)
 	//创建作者文件夹
-	if err := os.MkdirAll(path.Join(authorUrlSlug, authorDir), os.ModePerm); err != nil {
+	if err := os.MkdirAll(path.Join(cfg.DataDir, authorUrlSlug, authorDir), os.ModePerm); err != nil {
 		return fmt.Errorf("create author dir error: %v", err)
 	}
 	slog.Info("作者主页", "authorHostUrl", authorHost)
@@ -46,7 +45,7 @@ func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, a
 
 	converter := md.NewConverter("", true, nil)
 	for i, article := range postList {
-		filePath := path.Join(utils.GetAppDataPath(), authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
+		filePath := path.Join(cfg.DataDir, authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
 		if err := afdian.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
 			return err
 		}

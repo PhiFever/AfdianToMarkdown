@@ -3,7 +3,6 @@ package album
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/config"
-	"AfdianToMarkdown/utils"
 	"fmt"
 	"golang.org/x/exp/slog"
 	"net/url"
@@ -41,13 +40,13 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 	authorUrlSlug, albumName, albumPostList := afdian.GetAlbumPostList(cfg, albumId, cookieString)
 	time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
 
-	albumSaveDir := path.Join(authorUrlSlug, albumName)
+	albumSaveDir := path.Join(cfg.DataDir, authorUrlSlug, albumName)
 	if err := os.MkdirAll(albumSaveDir, os.ModePerm); err != nil {
 		return fmt.Errorf("create album dir <%s> error: %v", albumSaveDir, err)
 	}
 
 	for i, post := range albumPostList {
-		filePath := path.Join(utils.GetAppDataPath(), albumSaveDir, cast.ToString(i)+"_"+post.Name+".md")
+		filePath := path.Join(albumSaveDir, cast.ToString(i)+"_"+post.Name+".md")
 
 		if err := afdian.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter); err != nil {
 			return err
