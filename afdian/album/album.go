@@ -18,8 +18,14 @@ import (
 func GetAlbums(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
 	albumHost, _ := url.JoinPath(cfg.HostUrl, "a", authorUrlSlug, "album")
 	slog.Info("album列表页:", "albumHostUrl", albumHost)
-	userId := afdian.GetAuthorId(cfg, authorUrlSlug, albumHost, cookieString)
-	albumList := afdian.GetAlbumList(cfg, userId, albumHost, cookieString)
+	userId, err := afdian.GetAuthorId(cfg, authorUrlSlug, albumHost, cookieString)
+	if err != nil {
+		return err
+	}
+	albumList, err := afdian.GetAlbumList(cfg, userId, albumHost, cookieString)
+	if err != nil {
+		return err
+	}
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
 		slog.Info("Find album: ", "albumName", album.AlbumName)
@@ -37,7 +43,10 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 	//album.AlbumUrl会类似于 https://afdian.com/album/xyz
 	re := regexp.MustCompile("^.*/album/")
 	albumId := re.ReplaceAllString(album.AlbumUrl, "")
-	authorUrlSlug, albumName, albumPostList := afdian.GetAlbumPostList(cfg, albumId, cookieString)
+	authorUrlSlug, albumName, albumPostList, err := afdian.GetAlbumPostList(cfg, albumId, cookieString)
+	if err != nil {
+		return err
+	}
 	time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))
 
 	albumSaveDir := path.Join(cfg.DataDir, authorUrlSlug, albumName)

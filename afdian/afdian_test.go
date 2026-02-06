@@ -24,7 +24,11 @@ func init() {
 	slog.SetDefault(logger.SetupLogger())
 	cfg = config.NewConfig("afdian.com", `D:\MyProject\Golang\AfdianToMarkdown\data`, `D:\MyProject\Golang\AfdianToMarkdown\cookies.json`)
 	slog.Info("cookiePath:", "path", cfg.CookiePath)
-	cookieString, authToken = GetCookies(cfg.CookiePath)
+	var err error
+	cookieString, authToken, err = GetCookies(cfg.CookiePath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load cookies: %v", err))
+	}
 }
 
 func getAlbumUrl(AlbumId string) string {
@@ -62,7 +66,9 @@ func TestGetAuthorId(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, GetAuthorId(cfg, tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString), "GetAuthorId(%v, %v, %v)", tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
+			got, err := GetAuthorId(cfg, tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "GetAuthorId(%v, %v, %v)", tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
 		})
 	}
 }
@@ -83,7 +89,8 @@ func TestGetAuthorMotionUrlList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			authorArticleList, nextPublishSn := GetMotionUrlList(cfg, tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			authorArticleList, nextPublishSn, err := GetMotionUrlList(cfg, tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			assert.NoError(t, err)
 			assert.Equalf(t, tt.wantArticleList, authorArticleList, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 			assert.Equalf(t, tt.wantNextPublishSn, nextPublishSn, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 		})
@@ -125,7 +132,8 @@ func TestGetAlbumList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotList := GetAlbumList(cfg, tt.args.userId, tt.args.referer, tt.args.cookieString)
+			gotList, err := GetAlbumList(cfg, tt.args.userId, tt.args.referer, tt.args.cookieString)
+			assert.NoError(t, err)
 			for _, wantAlbum := range tt.want {
 				assert.Contains(t, gotList, wantAlbum, "GetAlbumList(%v, %v, %v) not contains want album: %s", tt.args.userId, tt.args.referer, tt.args.cookieString, wantAlbum)
 			}
@@ -170,7 +178,8 @@ func TestGetAlbumArticleList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUrlSlug, gotAlbumName, gotPost := GetAlbumPostList(cfg, tt.args.albumId, tt.args.authToken)
+			gotUrlSlug, gotAlbumName, gotPost, err := GetAlbumPostList(cfg, tt.args.albumId, tt.args.authToken)
+			assert.NoError(t, err)
 			assert.Equalf(t, tt.wantUrlSlug, gotUrlSlug, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
 			assert.Equalf(t, tt.wantAlbumName, gotAlbumName, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
 			assert.Subset(t, gotPost, tt.wantPost, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
@@ -193,7 +202,9 @@ func TestGetArticleContent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, getPostContent(cfg, tt.args.articleUrl, tt.args.authToken, tt.args.converter), "getPostContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
+			got, err := getPostContent(cfg, tt.args.articleUrl, tt.args.authToken, tt.args.converter)
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "getPostContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
 		})
 	}
 }
@@ -213,7 +224,8 @@ func TestGetArticleComment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotCommentString, gotHotCommentString := GetPostComment(cfg, tt.args.articleUrl, tt.args.cookieString)
+			gotCommentString, gotHotCommentString, err := GetPostComment(cfg, tt.args.articleUrl, tt.args.cookieString)
+			assert.NoError(t, err)
 			assert.Equalf(t, tt.wantCommentString, gotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
 			assert.Equalf(t, tt.wantHotCommentString, gotHotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
 		})

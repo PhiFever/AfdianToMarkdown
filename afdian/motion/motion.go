@@ -32,7 +32,10 @@ func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, a
 	var postList []afdian.Post
 	for {
 		//获取作者作品列表
-		subArticleList, publishSn := afdian.GetMotionUrlList(cfg, authorUrlSlug, cookieString, prevPublishSn)
+		subArticleList, publishSn, err := afdian.GetMotionUrlList(cfg, authorUrlSlug, cookieString, prevPublishSn)
+		if err != nil {
+			return err
+		}
 		postList = append(postList, subArticleList...)
 		prevPublishSn = publishSn
 		if publishSn == "" {

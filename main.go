@@ -72,7 +72,11 @@ func main() {
 			}
 
 			cfg = config.NewConfig(afdianHost, dataDir, cookiePath)
-			cookieString, authToken = afdian.GetCookies(cfg.CookiePath)
+			var err2 error
+			cookieString, authToken, err2 = afdian.GetCookies(cfg.CookiePath)
+			if err2 != nil {
+				return ctx, err2
+			}
 			return ctx, nil
 		},
 		After: func(ctx context.Context, cmd *cli.Command) error {
