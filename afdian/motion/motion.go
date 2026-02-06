@@ -2,6 +2,7 @@ package motion
 
 import (
 	"AfdianToMarkdown/afdian"
+	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/utils"
 	"fmt"
 	"golang.org/x/exp/slog"
@@ -19,8 +20,8 @@ const (
 )
 
 // GetMotions 获取作者的所有作品
-func GetMotions(authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
-	authorHost, _ := url.JoinPath(afdian.HostUrl, "a", authorUrlSlug)
+func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
+	authorHost, _ := url.JoinPath(cfg.HostUrl, "a", authorUrlSlug)
 	//创建作者文件夹
 	if err := os.MkdirAll(path.Join(authorUrlSlug, authorDir), os.ModePerm); err != nil {
 		return fmt.Errorf("create author dir error: %v", err)
@@ -32,7 +33,7 @@ func GetMotions(authorUrlSlug string, cookieString string, authToken string, dis
 	var postList []afdian.Post
 	for {
 		//获取作者作品列表
-		subArticleList, publishSn := afdian.GetMotionUrlList(authorUrlSlug, cookieString, prevPublishSn)
+		subArticleList, publishSn := afdian.GetMotionUrlList(cfg, authorUrlSlug, cookieString, prevPublishSn)
 		postList = append(postList, subArticleList...)
 		prevPublishSn = publishSn
 		if publishSn == "" {
@@ -46,7 +47,7 @@ func GetMotions(authorUrlSlug string, cookieString string, authToken string, dis
 	converter := md.NewConverter("", true, nil)
 	for i, article := range postList {
 		filePath := path.Join(utils.GetAppDataPath(), authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
-		if err := afdian.SavePostIfNotExist(filePath, article, authToken, disableComment, converter); err != nil {
+		if err := afdian.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
 			return err
 		}
 	}

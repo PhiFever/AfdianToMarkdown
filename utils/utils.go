@@ -14,7 +14,10 @@ const (
 	ImgDir = ".assets"
 )
 
-var CookiePath = path.Join(GetAppDataPath(), `cookies.json`)
+// DefaultCookiePath 返回默认的 cookie 文件路径
+func DefaultCookiePath() string {
+	return path.Join(GetAppDataPath(), `cookies.json`)
+}
 
 func GetExecutionTime(startTime, endTime time.Time) string {
 	duration := endTime.Sub(startTime)

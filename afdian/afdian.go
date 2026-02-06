@@ -1,6 +1,7 @@
 package afdian
 
 import (
+	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/utils"
 	"bytes"
 	"context"
@@ -20,11 +21,6 @@ import (
 	"github.com/carlmjohnson/requests"
 	"github.com/spf13/cast"
 	"github.com/tidwall/gjson"
-)
-
-var (
-	host    string
-	HostUrl string
 )
 
 const (
@@ -56,11 +52,6 @@ type Cookie struct {
 	Session    bool    `json:"session"`
 	StoreID    string  `json:"storeId"`
 	Value      string  `json:"value"`
-}
-
-func SetHostUrl(afdianHost string) {
-	host = afdianHost
-	HostUrl = fmt.Sprintf("https://%s", afdianHost)
 }
 
 // ReadCookiesFromFile 从文件中读取 Cookies
@@ -100,8 +91,8 @@ func GetAuthTokenString(cookies []Cookie) (authTokenString string) {
 	return authTokenString
 }
 
-func GetCookies() (cookieString string, authToken string) {
-	cookies, err := ReadCookiesFromFile(utils.CookiePath)
+func GetCookies(cookiePath string) (cookieString string, authToken string) {
+	cookies, err := ReadCookiesFromFile(cookiePath)
 	if err != nil {
 		slog.Error("Failed to read cookies from file:", "error", err)
 		os.Exit(-1)
@@ -112,7 +103,7 @@ func GetCookies() (cookieString string, authToken string) {
 	return cookieString, authToken
 }
 
-func buildAfdianHeaders(cookieString string, referer string) http.Header {
+func buildAfdianHeaders(host string, cookieString string, referer string) http.Header {
 	return http.Header{
 		"authority":          {host},
 		"accept":             {"accept", "application/json, text/plain, */*"},
@@ -135,11 +126,11 @@ func buildAfdianHeaders(cookieString string, referer string) http.Header {
 }
 
 // NewRequestGet 发送GET请求
-func NewRequestGet(Url string, cookieString string, referer string) []byte {
+func NewRequestGet(host string, Url string, cookieString string, referer string) []byte {
 	var body bytes.Buffer
 	err := requests.
 		URL(Url).
-		Headers(buildAfdianHeaders(cookieString, referer)).
+		Headers(buildAfdianHeaders(host, cookieString, referer)).
 		ToBytesBuffer(&body).
 		Fetch(context.Background())
 	if err != nil {
@@ -150,9 +141,9 @@ func NewRequestGet(Url string, cookieString string, referer string) []byte {
 
 // GetAuthorId 获取作者的ID
 // refer: https://afdian.com/a/Alice
-func GetAuthorId(authorUrlSlug string, referer string, cookieString string) (authorId string) {
-	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", HostUrl, authorUrlSlug)
-	body := NewRequestGet(apiUrl, cookieString, referer)
+func GetAuthorId(cfg *config.Config, authorUrlSlug string, referer string, cookieString string) (authorId string) {
+	apiUrl := fmt.Sprintf("%s/api/user/get-profile-by-slug?url_slug=%s", cfg.HostUrl, authorUrlSlug)
+	body := NewRequestGet(cfg.Host, apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", body)
 	authorId = gjson.GetBytes(body, "data.user.user_id").String()
 	return authorId
@@ -160,19 +151,19 @@ func GetAuthorId(authorUrlSlug string, referer string, cookieString string) (aut
 
 // GetMotionUrlList 获取作者的文章列表
 // publish_sn获取的逻辑是第一轮请求为空，然后第二轮请求输入上一轮获取到的最后一篇文章的publish_sn，以此类推，直到获取到的publish_sn为空结束
-func GetMotionUrlList(userName string, cookieString string, prevPublishSn string) (authorArticleList []Post, nextPublishSn string) {
-	userReferer := fmt.Sprintf("%s/a/%s", HostUrl, userName)
-	userId := GetAuthorId(userName, userReferer, cookieString)
-	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", HostUrl, userId, prevPublishSn)
+func GetMotionUrlList(cfg *config.Config, userName string, cookieString string, prevPublishSn string) (authorArticleList []Post, nextPublishSn string) {
+	userReferer := fmt.Sprintf("%s/a/%s", cfg.HostUrl, userName)
+	userId := GetAuthorId(cfg, userName, userReferer, cookieString)
+	apiUrl := fmt.Sprintf("%s/api/post/get-list?user_id=%s&type=new&publish_sn=%s&per_page=10&group_id=&all=1&is_public=&plan_id=&title=&name=", cfg.HostUrl, userId, prevPublishSn)
 	slog.Info("Get publish_sn apiUrl:", "url", apiUrl)
 
-	body := NewRequestGet(apiUrl, cookieString, userReferer)
+	body := NewRequestGet(cfg.Host, apiUrl, cookieString, userReferer)
 	//log.Printf("%s\n", body)
 
 	articleListJson := gjson.GetBytes(body, "data.list")
 	articleListJson.ForEach(func(key, value gjson.Result) bool {
 		articleId := value.Get("post_id").String()
-		articleUrl, _ := url.JoinPath(HostUrl, "post", articleId)
+		articleUrl, _ := url.JoinPath(cfg.HostUrl, "post", articleId)
 		var pictures []string
 		for _, result := range value.Get("pics").Array() {
 			pictures = append(pictures, result.String())
@@ -191,9 +182,9 @@ func GetMotionUrlList(userName string, cookieString string, prevPublishSn string
 }
 
 // GetAlbumList 获取作者的作品集列表
-func GetAlbumList(userId string, referer string, cookieString string) (albumList []Album) {
-	apiUrl := fmt.Sprintf("%s/api/user/get-album-list?user_id=%s", HostUrl, userId)
-	body := NewRequestGet(apiUrl, cookieString, referer)
+func GetAlbumList(cfg *config.Config, userId string, referer string, cookieString string) (albumList []Album) {
+	apiUrl := fmt.Sprintf("%s/api/user/get-album-list?user_id=%s", cfg.HostUrl, userId)
+	body := NewRequestGet(cfg.Host, apiUrl, cookieString, referer)
 	//fmt.Printf("%s\n", body)
 	albumListJson := gjson.GetBytes(body, "data.list")
 	//fmt.Println(utils.ToJSON(albumListJson))
@@ -201,7 +192,7 @@ func GetAlbumList(userId string, referer string, cookieString string) (albumList
 		//fmt.Println(value.Get("title").String())
 		//fmt.Println(value.Get("album_id").String())
 		albumId := value.Get("album_id").String()
-		albumUrl, _ := url.JoinPath(HostUrl, "album", albumId)
+		albumUrl, _ := url.JoinPath(cfg.HostUrl, "album", albumId)
 
 		albumList = append(albumList, Album{AlbumName: value.Get("title").String(), AlbumUrl: albumUrl})
 		return true
@@ -210,24 +201,24 @@ func GetAlbumList(userId string, referer string, cookieString string) (albumList
 	return albumList
 }
 
-func GetAlbumPostList(albumId string, cookieString string) (authorUrlSlug string, albumName string, albumPostList []Post) {
-	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", HostUrl, albumId)
-	referer := fmt.Sprintf("%s/album/%s", HostUrl, albumId)
+func GetAlbumPostList(cfg *config.Config, albumId string, cookieString string) (authorUrlSlug string, albumName string, albumPostList []Post) {
+	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", cfg.HostUrl, albumId)
+	referer := fmt.Sprintf("%s/album/%s", cfg.HostUrl, albumId)
 
-	postCountBodyText := NewRequestGet(postCountApiUrl, cookieString, referer)
+	postCountBodyText := NewRequestGet(cfg.Host, postCountApiUrl, cookieString, referer)
 	albumName = gjson.GetBytes(postCountBodyText, "data.album.title").String()
 	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
 	authorUrlSlug = gjson.GetBytes(postCountBodyText, "data.album.user.url_slug").String()
 
 	var i int64
 	for i = 0; i < postCount; i += 10 {
-		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", HostUrl, albumId, i)
-		body := NewRequestGet(apiUrl, cookieString, referer)
+		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", cfg.HostUrl, albumId, i)
+		body := NewRequestGet(cfg.Host, apiUrl, cookieString, referer)
 
 		albumPostListJson := gjson.GetBytes(body, "data.list")
 		albumPostListJson.ForEach(func(key, value gjson.Result) bool {
 			postId := value.Get("post_id").String()
-			postUrl, _ := url.JoinPath(HostUrl, "album", albumId, postId)
+			postUrl, _ := url.JoinPath(cfg.HostUrl, "album", albumId, postId)
 
 			var pictures []string
 			for _, result := range value.Get("pics").Array() {
@@ -246,19 +237,19 @@ func GetAlbumPostList(albumId string, cookieString string) (authorUrlSlug string
 }
 
 // getPostContent 获取文章正文内容
-func getPostContent(articleUrl string, authToken string, converter *md.Converter) string {
+func getPostContent(cfg *config.Config, articleUrl string, authToken string, converter *md.Converter) string {
 	//在album内的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id={album_id}
 	//在album外的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id=
 	slog.Info("articleUrl:", "url", articleUrl)
 	var apiUrl string
 	splitUrl := strings.Split(articleUrl, "/")
 	if strings.Contains(articleUrl, "album") {
-		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=%s", HostUrl, splitUrl[len(splitUrl)-1], splitUrl[len(splitUrl)-2])
+		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=%s", cfg.HostUrl, splitUrl[len(splitUrl)-1], splitUrl[len(splitUrl)-2])
 	} else {
-		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", HostUrl, splitUrl[len(splitUrl)-1])
+		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", cfg.HostUrl, splitUrl[len(splitUrl)-1])
 	}
 	slog.Info("Get article content apiUrl:", "url", apiUrl)
-	body := NewRequestGet(apiUrl, authToken, articleUrl)
+	body := NewRequestGet(cfg.Host, apiUrl, authToken, articleUrl)
 	//slog.Info("body: ", string(body))
 	articleContent := gjson.GetBytes(body, "data.post.content").String()
 	//slog.Info("articleContent: ", articleContent)
@@ -275,14 +266,14 @@ func getPostContent(articleUrl string, authToken string, converter *md.Converter
 // GetPostComment 获取文章评论
 // TODO:根据publish_sn获取全部评论
 // https://afdian.com/api/comment/get-list?post_id={post_id}&publish_sn={publish_sn}&type=old&hot=
-func GetPostComment(articleUrl string, cookieString string) (commentString string, hotCommentString string) {
+func GetPostComment(cfg *config.Config, articleUrl string, cookieString string) (commentString string, hotCommentString string) {
 	//https://afdian.com/api/comment/get-list?post_id={post_id}&publish_sn=&type=old&hot=1
 	splitUrl := strings.Split(articleUrl, "/")
 	postId := splitUrl[len(splitUrl)-1]
-	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", HostUrl, postId)
+	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", cfg.HostUrl, postId)
 	slog.Info("Get article comment apiUrl:", "url", apiUrl)
 
-	body := NewRequestGet(apiUrl, cookieString, articleUrl)
+	body := NewRequestGet(cfg.Host, apiUrl, cookieString, articleUrl)
 	commentJson := gjson.GetBytes(body, "data.list")
 	hotCommentJson := gjson.GetBytes(body, "data.hot_list")
 	if hotCommentJson.Exists() {
@@ -315,12 +306,12 @@ func getCommentString(commentJson gjson.Result) (commentString string) {
 	return commentString
 }
 
-func SavePostIfNotExist(filePath string, article Post, authToken string, disableComment bool, converter *md.Converter) error {
+func SavePostIfNotExist(cfg *config.Config, filePath string, article Post, authToken string, disableComment bool, converter *md.Converter) error {
 	_, err := os.Stat(filePath)
 	fileExists := err == nil || os.IsExist(err)
 	if !fileExists {
 		slog.Info("Saving file:", "path", filePath)
-		content := getPostContent(article.Url, authToken, converter)
+		content := getPostContent(cfg, article.Url, authToken, converter)
 		//TODO:不支持图文混排
 		picContent, err := getPictures(filePath, article)
 		if err != nil {
@@ -332,7 +323,7 @@ func SavePostIfNotExist(filePath string, article Post, authToken string, disable
 			article.Name, referUrl, content, picContent)
 
 		if !disableComment {
-			commentString, hotCommentString := GetPostComment(article.Url, authToken)
+			commentString, hotCommentString := GetPostComment(cfg, article.Url, authToken)
 			articleContent = fmt.Sprintf("%s\n\n%s\n\n%s", articleContent, hotCommentString, commentString)
 		}
 

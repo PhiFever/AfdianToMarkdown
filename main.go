@@ -4,6 +4,7 @@ import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/afdian/album"
 	"AfdianToMarkdown/afdian/motion"
+	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/logger"
 	"AfdianToMarkdown/utils"
 	"context"
@@ -25,6 +26,8 @@ var (
 	version string
 	commit  string
 	date    string
+
+	cfg *config.Config
 )
 
 func main() {
@@ -46,8 +49,8 @@ func main() {
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 			// 在这里可以根据需要做全局参数的预处理
-			afdian.SetHostUrl(afdianHost)
-			cookieString, authToken = afdian.GetCookies()
+			cfg = config.NewConfig(afdianHost, utils.DefaultCookiePath())
+			cookieString, authToken = afdian.GetCookies(cfg.CookiePath)
 			return ctx, nil
 		},
 		After: func(ctx context.Context, cmd *cli.Command) error {
@@ -66,7 +69,7 @@ func main() {
 					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorUrlSlug, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return motion.GetMotions(authorUrlSlug, cookieString, authToken, disableComment)
+					return motion.GetMotions(cfg, authorUrlSlug, cookieString, authToken, disableComment)
 				},
 			},
 			{
@@ -77,7 +80,7 @@ func main() {
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					converter := md.NewConverter("", true, nil)
-					return album.GetAlbum(cookieString, authToken, afdian.Album{AlbumName: "", AlbumUrl: albumUrl}, disableComment, converter)
+					return album.GetAlbum(cfg, cookieString, authToken, afdian.Album{AlbumName: "", AlbumUrl: albumUrl}, disableComment, converter)
 				},
 			},
 			{
@@ -87,7 +90,7 @@ func main() {
 					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorUrlSlug, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return album.GetAlbums(authorUrlSlug, cookieString, authToken, disableComment)
+					return album.GetAlbums(cfg, authorUrlSlug, cookieString, authToken, disableComment)
 				},
 			},
 			{
@@ -100,10 +103,10 @@ func main() {
 					}
 					for _, author := range authors {
 						slog.Info("Find exist author: ", "authorName", author)
-						if err := motion.GetMotions(author, cookieString, authToken, disableComment); err != nil {
+						if err := motion.GetMotions(cfg, author, cookieString, authToken, disableComment); err != nil {
 							return err
 						}
-						if err := album.GetAlbums(author, cookieString, authToken, disableComment); err != nil {
+						if err := album.GetAlbums(cfg, author, cookieString, authToken, disableComment); err != nil {
 							return err
 						}
 					}
