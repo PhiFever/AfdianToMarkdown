@@ -20,6 +20,12 @@ go build -o AfdianToMarkdown.exe .
 ./AfdianToMarkdown albums -au <作者url_slug>
 ./AfdianToMarkdown update    # 更新所有已下载作者
 
+# 全局参数
+# --host <域名>       主站域名（默认 afdian.com）
+# --dir <路径>        数据存储目录（默认 程序目录/data）
+# --cookie <路径>     cookies.json 路径（默认 程序目录/cookies.json）
+# --disable_comment   不下载评论
+
 # 测试（需要有效的 cookies.json，测试会实际调用 API）
 go test ./afdian/ -run TestGetAuthorId -v
 go test ./... -v
@@ -47,7 +53,7 @@ CLI (main.go) → config.Config 创建
 - **`afdian/motion/`** — 按作者下载所有动态，使用 `publish_sn` 游标分页
 - **`afdian/album/`** — 按作者下载所有作品集，或下载单个作品集
 - **`logger/`** — 自定义 slog Handler，带 ANSI 彩色输出
-- **`utils/`** — 文件名安全转换、程序目录定位（`GetAppDataPath` 通过 cookies.json 位置判断）、作者目录扫描
+- **`utils/`** — 文件名安全转换、程序目录解析（`ResolveAppDir`）、默认路径推断、作者目录扫描
 
 ### 关键设计约定
 
@@ -82,5 +88,5 @@ CLI (main.go) → config.Config 创建
 ## 注意事项
 
 - 测试直接调用真实 API，需要有效 cookies.json 且测试中硬编码了 Windows 路径
-- `GetAppDataPath()` 通过寻找 cookies.json 来定位程序目录，`go run` 和 `go build` 行为不同
+- `ResolveAppDir()` 通过可执行文件路径（排除 go-build 临时目录）或工作目录推断程序目录，数据目录和 cookie 路径可通过 `--dir` 和 `--cookie` 参数独立指定
 - 版本号通过 goreleaser ldflags 注入 `main.version`/`main.commit`/`main.date`

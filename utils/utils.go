@@ -2,9 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"golang.org/x/exp/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -14,9 +12,34 @@ const (
 	ImgDir = ".assets"
 )
 
-// DefaultCookiePath 返回默认的 cookie 文件路径
-func DefaultCookiePath() string {
-	return path.Join(GetAppDataPath(), `cookies.json`)
+// ResolveAppDir 解析程序所在目录（可执行文件目录或工作目录）
+// 用于推断默认的数据目录和 cookie 路径
+func ResolveAppDir() (string, error) {
+	// 1. 尝试可执行文件目录
+	ex, err := os.Executable()
+	if err == nil {
+		execDir := filepath.Dir(ex)
+		// 排除 go run 产生的临时目录
+		if !strings.Contains(execDir, "go-build") {
+			return execDir, nil
+		}
+	}
+	// 2. 回退到当前工作目录
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+	return wd, nil
+}
+
+// DefaultDataDir 返回默认的数据目录（appDir/data）
+func DefaultDataDir(appDir string) string {
+	return filepath.Join(appDir, "data")
+}
+
+// DefaultCookiePath 返回默认的 cookie 文件路径（appDir/cookies.json）
+func DefaultCookiePath(appDir string) string {
+	return filepath.Join(appDir, "cookies.json")
 }
 
 func GetExecutionTime(startTime, endTime time.Time) string {
@@ -78,38 +101,4 @@ func CheckAndListAuthors(dataDir string) ([]string, error) {
 
 	//fmt.Println("folders: ", folders)
 	return folders, nil
-}
-
-// GetAppDataPath 根据 cookies.json 获取程序的实际执行目录
-// 若以 build 方式运行，找到可执行文件所在目录
-// 若以 go run 方式运行，找到当前工作目录
-func GetAppDataPath() string {
-	// 1. 尝试查找可执行文件目录
-	ex, err := os.Executable()
-	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(-1)
-	}
-	execDir := filepath.Dir(ex)
-	if err == nil {
-		execCookie := filepath.Join(execDir, "cookies.json")
-		if _, err := os.Stat(execCookie); err == nil {
-			return execDir
-		}
-	}
-	// 2. 尝试查找当前工作目录
-	wd, err := os.Getwd()
-	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(-1)
-	}
-	if err == nil {
-		wdCookie := filepath.Join(wd, "cookies.json")
-		if _, err := os.Stat(wdCookie); err == nil {
-			return wd
-		}
-	}
-	slog.Error("Failed to find cookies.json both in", "execDir", execDir, "workDir", filepath.Dir(wd))
-	os.Exit(-1)
-	return ""
 }

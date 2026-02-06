@@ -9,16 +9,18 @@ import (
 	"AfdianToMarkdown/utils"
 	"context"
 	"fmt"
+	"os"
+	"time"
+
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/urfave/cli/v3"
 	"golang.org/x/exp/slog"
-	"os"
-	"path"
-	"time"
 )
 
 var (
 	afdianHost              string
+	dataDirFlag             string
+	cookiePathFlag          string
 	authorUrlSlug           string
 	albumUrl                string
 	cookieString, authToken string
@@ -46,11 +48,30 @@ func main() {
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "host", Destination: &afdianHost, Value: "afdian.com", Usage: "主站域名，如访问不通可自行更改"},
+			&cli.StringFlag{Name: "dir", Destination: &dataDirFlag, Value: "", Usage: "数据存储目录，默认为程序所在目录下的 data 文件夹"},
+			&cli.StringFlag{Name: "cookie", Destination: &cookiePathFlag, Value: "", Usage: "cookies.json 文件路径，默认为程序所在目录下的 cookies.json"},
 			&cli.BoolFlag{Name: "disable_comment", Destination: &disableComment, Value: false, Usage: "为true时不下载评论"},
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-			// 在这里可以根据需要做全局参数的预处理
-			cfg = config.NewConfig(afdianHost, path.Join(utils.GetAppDataPath(), "data"), utils.DefaultCookiePath())
+			// 解析默认目录
+			appDir, err := utils.ResolveAppDir()
+			if err != nil {
+				return ctx, fmt.Errorf("failed to resolve app directory: %w", err)
+			}
+
+			// 数据目录：优先使用 --dir 参数，否则使用默认值
+			dataDir := dataDirFlag
+			if dataDir == "" {
+				dataDir = utils.DefaultDataDir(appDir)
+			}
+
+			// Cookie 路径：优先使用 --cookie 参数，否则使用默认值
+			cookiePath := cookiePathFlag
+			if cookiePath == "" {
+				cookiePath = utils.DefaultCookiePath(appDir)
+			}
+
+			cfg = config.NewConfig(afdianHost, dataDir, cookiePath)
 			cookieString, authToken = afdian.GetCookies(cfg.CookiePath)
 			return ctx, nil
 		},
