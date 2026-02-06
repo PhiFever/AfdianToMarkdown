@@ -202,7 +202,7 @@ func TestGetArticleContent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getPostContent(cfg, tt.args.articleUrl, tt.args.authToken, tt.args.converter)
+			got, err := GetPostContent(cfg, tt.args.articleUrl, tt.args.authToken, tt.args.converter)
 			assert.NoError(t, err)
 			assert.Equalf(t, tt.want, got, "getPostContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
 		})

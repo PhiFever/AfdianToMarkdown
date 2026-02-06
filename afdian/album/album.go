@@ -3,8 +3,8 @@ package album
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/config"
+	"AfdianToMarkdown/storage"
 	"fmt"
-	"golang.org/x/exp/slog"
 	"net/url"
 	"os"
 	"path"
@@ -13,6 +13,7 @@ import (
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/spf13/cast"
+	"golang.org/x/exp/slog"
 )
 
 func GetAlbums(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
@@ -57,7 +58,7 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 	for i, post := range albumPostList {
 		filePath := path.Join(albumSaveDir, cast.ToString(i)+"_"+post.Name+".md")
 
-		if err := afdian.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter); err != nil {
+		if err := storage.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter); err != nil {
 			return err
 		}
 	}

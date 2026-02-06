@@ -3,8 +3,8 @@ package motion
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/config"
+	"AfdianToMarkdown/storage"
 	"fmt"
-	"golang.org/x/exp/slog"
 	"net/url"
 	"os"
 	"path"
@@ -12,6 +12,7 @@ import (
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/spf13/cast"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -49,7 +50,7 @@ func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, a
 	converter := md.NewConverter("", true, nil)
 	for i, article := range postList {
 		filePath := path.Join(cfg.DataDir, authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
-		if err := afdian.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
+		if err := storage.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
 			return err
 		}
 	}
