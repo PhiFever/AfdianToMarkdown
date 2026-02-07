@@ -1,5 +1,7 @@
 package afdian
 
+import "time"
+
 // Album 作品集信息
 type Album struct {
 	AlbumName string
@@ -8,9 +10,10 @@ type Album struct {
 
 // Post 文章信息
 type Post struct {
-	Name     string
-	Url      string
-	Pictures []string
+	Name        string
+	Url         string
+	Pictures    []string
+	PublishTime time.Time
 }
 
 // Cookie 从 Chrome 中使用cookie master导出的 Cookies

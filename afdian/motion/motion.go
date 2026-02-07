@@ -11,7 +11,6 @@ import (
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
-	"github.com/spf13/cast"
 	"golang.org/x/exp/slog"
 )
 
@@ -48,8 +47,9 @@ func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, a
 	slog.Info("postList length:", len(postList))
 
 	converter := md.NewConverter("", true, nil)
-	for i, article := range postList {
-		filePath := path.Join(cfg.DataDir, authorUrlSlug, authorDir, cast.ToString(i)+"_"+article.Name+".md")
+	for _, article := range postList {
+		timePrefix := article.PublishTime.Format("2006-01-02_15_04_05")
+		filePath := path.Join(cfg.DataDir, authorUrlSlug, authorDir, timePrefix+"_"+article.Name+".md")
 		if err := storage.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
 			return err
 		}

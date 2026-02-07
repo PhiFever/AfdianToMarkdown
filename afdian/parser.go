@@ -50,10 +50,13 @@ func GetMotionUrlList(cfg *config.Config, userName string, cookieString string, 
 		for _, result := range value.Get("pics").Array() {
 			pictures = append(pictures, result.String())
 		}
+		publishTimeStamp := cast.ToInt64(value.Get("publish_time").String())
+		publishTime := time.Unix(publishTimeStamp, 0)
 		authorArticleList = append(authorArticleList, Post{
-			Name:     utils.ToSafeFilename(value.Get("title").String()),
-			Url:      articleUrl,
-			Pictures: pictures,
+			Name:        utils.ToSafeFilename(value.Get("title").String()),
+			Url:         articleUrl,
+			Pictures:    pictures,
+			PublishTime: publishTime,
 		})
 		return true
 	})
@@ -110,10 +113,13 @@ func GetAlbumPostList(cfg *config.Config, albumId string, cookieString string) (
 			for _, result := range value.Get("pics").Array() {
 				pictures = append(pictures, result.String())
 			}
+			publishTimeStamp := cast.ToInt64(value.Get("publish_time").String())
+			publishTime := time.Unix(publishTimeStamp, 0)
 			albumPostList = append(albumPostList, Post{
-				Name:     utils.ToSafeFilename(value.Get("title").String()),
-				Url:      postUrl,
-				Pictures: pictures,
+				Name:        utils.ToSafeFilename(value.Get("title").String()),
+				Url:         postUrl,
+				Pictures:    pictures,
+				PublishTime: publishTime,
 			})
 			return true
 		})
@@ -134,7 +140,7 @@ func GetPostContent(cfg *config.Config, articleUrl string, authToken string, con
 	} else {
 		apiUrl = fmt.Sprintf("%s/api/post/get-detail?post_id=%s&album_id=", cfg.HostUrl, splitUrl[len(splitUrl)-1])
 	}
-	slog.Info("Get article content apiUrl:", "url", apiUrl)
+	slog.Debug("Get article content apiUrl:", "url", apiUrl)
 	body, err := NewRequestGet(cfg.Host, apiUrl, authToken, articleUrl)
 	if err != nil {
 		return "", err
@@ -157,7 +163,7 @@ func GetPostComment(cfg *config.Config, articleUrl string, cookieString string) 
 	splitUrl := strings.Split(articleUrl, "/")
 	postId := splitUrl[len(splitUrl)-1]
 	apiUrl := fmt.Sprintf("%s/api/comment/get-list?post_id=%s&publish_sn=&type=old&hot=1", cfg.HostUrl, postId)
-	slog.Info("Get article comment apiUrl:", "url", apiUrl)
+	slog.Debug("Get article comment apiUrl:", "url", apiUrl)
 
 	body, err := NewRequestGet(cfg.Host, apiUrl, cookieString, articleUrl)
 	if err != nil {

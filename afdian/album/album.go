@@ -12,7 +12,6 @@ import (
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
-	"github.com/spf13/cast"
 	"golang.org/x/exp/slog"
 )
 
@@ -55,8 +54,9 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 		return fmt.Errorf("create album dir <%s> error: %v", albumSaveDir, err)
 	}
 
-	for i, post := range albumPostList {
-		filePath := path.Join(albumSaveDir, cast.ToString(i)+"_"+post.Name+".md")
+	for _, post := range albumPostList {
+		timePrefix := post.PublishTime.Format("2006-01-02_15_04_05")
+		filePath := path.Join(albumSaveDir, timePrefix+"_"+post.Name+".md")
 
 		if err := storage.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter); err != nil {
 			return err
