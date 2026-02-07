@@ -108,9 +108,9 @@ func GetAlbumInfo(cfg *config.Config, albumId string, cookieString string) (*Alb
 }
 
 // GetAlbumPostPage 获取作品集的一页文章列表
-func GetAlbumPostPage(cfg *config.Config, albumId string, cookieString string, lastRank int64) ([]Post, error) {
+func GetAlbumPostPage(cfg *config.Config, albumId string, cookieString string, lastRank int64, rankOrder string) ([]Post, error) {
 	referer := fmt.Sprintf("%s/album/%s", cfg.HostUrl, albumId)
-	apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", cfg.HostUrl, albumId, lastRank)
+	apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=%s&rankField=rank", cfg.HostUrl, albumId, lastRank, rankOrder)
 	body, err := NewRequestGet(cfg.Host, apiUrl, cookieString, referer)
 	if err != nil {
 		return nil, err

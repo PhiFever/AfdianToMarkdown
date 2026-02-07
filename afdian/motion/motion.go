@@ -19,7 +19,7 @@ const (
 )
 
 // GetMotions 获取作者的所有作品
-func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
+func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool, quickUpdate bool) error {
 	authorHost, _ := url.JoinPath(cfg.HostUrl, "a", authorUrlSlug)
 	//创建作者文件夹
 	if err := os.MkdirAll(path.Join(cfg.DataDir, authorUrlSlug, authorDir), os.ModePerm); err != nil {
@@ -40,8 +40,13 @@ func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, a
 		for _, article := range subArticleList {
 			timePrefix := article.PublishTime.Format("2006-01-02_15_04_05")
 			filePath := path.Join(cfg.DataDir, authorUrlSlug, authorDir, timePrefix+"_"+article.Name+".md")
-			if err := storage.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
+			skipped, err := storage.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter)
+			if err != nil {
 				return err
+			}
+			if quickUpdate && skipped {
+				slog.Info("Quick update: 检测到已存在文件，跳过剩余动态", "author", authorUrlSlug)
+				return nil
 			}
 		}
 

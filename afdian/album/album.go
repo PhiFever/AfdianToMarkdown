@@ -15,7 +15,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func GetAlbums(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool) error {
+func GetAlbums(cfg *config.Config, authorUrlSlug string, cookieString string, authToken string, disableComment bool, quickUpdate bool) error {
 	albumHost, _ := url.JoinPath(cfg.HostUrl, "a", authorUrlSlug, "album")
 	slog.Info("album列表页:", "albumHostUrl", albumHost)
 	userId, err := afdian.GetAuthorId(cfg, authorUrlSlug, albumHost, cookieString)
@@ -29,7 +29,7 @@ func GetAlbums(cfg *config.Config, authorUrlSlug string, cookieString string, au
 	converter := md.NewConverter("", true, nil)
 	for _, album := range albumList {
 		slog.Info("Find album: ", "albumName", album.AlbumName)
-		err := GetAlbum(cfg, cookieString, authToken, album, disableComment, converter)
+		err := GetAlbum(cfg, cookieString, authToken, album, disableComment, quickUpdate, converter)
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ func GetAlbums(cfg *config.Config, authorUrlSlug string, cookieString string, au
 	return nil
 }
 
-func GetAlbum(cfg *config.Config, cookieString string, authToken string, album afdian.Album, disableComment bool, converter *md.Converter) error {
+func GetAlbum(cfg *config.Config, cookieString string, authToken string, album afdian.Album, disableComment bool, quickUpdate bool, converter *md.Converter) error {
 	//获取作品集的所有文章
 	//album.AlbumUrl会类似于 https://afdian.com/album/xyz
 	re := regexp.MustCompile("^.*/album/")
@@ -58,7 +58,7 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 	//边获取边下载
 	var i int64
 	for i = 0; i < albumInfo.PostCount; i += 10 {
-		postList, err := afdian.GetAlbumPostPage(cfg, albumId, cookieString, i)
+		postList, err := afdian.GetAlbumPostPage(cfg, albumId, cookieString, i, "desc")
 		if err != nil {
 			return err
 		}
@@ -67,8 +67,13 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 			timePrefix := post.PublishTime.Format("2006-01-02_15_04_05")
 			filePath := path.Join(albumSaveDir, timePrefix+"_"+post.Name+".md")
 
-			if err := storage.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter); err != nil {
+			skipped, err := storage.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter)
+			if err != nil {
 				return err
+			}
+			if quickUpdate && skipped {
+				slog.Info("Quick update: 检测到已存在文件，跳过剩余作品集文章", "album", albumInfo.AlbumName)
+				return nil
 			}
 		}
 		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))

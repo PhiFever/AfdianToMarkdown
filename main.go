@@ -25,6 +25,7 @@ var (
 	albumUrl                string
 	cookieString, authToken string
 	disableComment          bool
+	quickUpdate             bool
 
 	version string
 	commit  string
@@ -95,7 +96,7 @@ func main() {
 					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorUrlSlug, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return motion.GetMotions(cfg, authorUrlSlug, cookieString, authToken, disableComment)
+					return motion.GetMotions(cfg, authorUrlSlug, cookieString, authToken, disableComment, false)
 				},
 			},
 			{
@@ -106,7 +107,7 @@ func main() {
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					converter := md.NewConverter("", true, nil)
-					return album.GetAlbum(cfg, cookieString, authToken, afdian.Album{AlbumName: "", AlbumUrl: albumUrl}, disableComment, converter)
+					return album.GetAlbum(cfg, cookieString, authToken, afdian.Album{AlbumName: "", AlbumUrl: albumUrl}, disableComment, false, converter)
 				},
 			},
 			{
@@ -116,12 +117,15 @@ func main() {
 					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorUrlSlug, Value: "", Usage: "待下载的作者id"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return album.GetAlbums(cfg, authorUrlSlug, cookieString, authToken, disableComment)
+					return album.GetAlbums(cfg, authorUrlSlug, cookieString, authToken, disableComment, false)
 				},
 			},
 			{
 				Name:  "update",
 				Usage: "更新所有已经下载的作者的动态和作品集",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "quick", Destination: &quickUpdate, Value: false, Usage: "快速更新：遇到已存在的文件时跳过剩余分页"},
+				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					authors, err := utils.CheckAndListAuthors(cfg.DataDir)
 					if err != nil {
@@ -129,10 +133,10 @@ func main() {
 					}
 					for _, author := range authors {
 						slog.Info("Find exist author: ", "authorName", author)
-						if err := motion.GetMotions(cfg, author, cookieString, authToken, disableComment); err != nil {
+						if err := motion.GetMotions(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
 							return err
 						}
-						if err := album.GetAlbums(cfg, author, cookieString, authToken, disableComment); err != nil {
+						if err := album.GetAlbums(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
 							return err
 						}
 					}

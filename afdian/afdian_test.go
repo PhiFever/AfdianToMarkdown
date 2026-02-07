@@ -193,7 +193,7 @@ func TestGetAlbumPostPage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPost, err := GetAlbumPostPage(cfg, tt.albumId, cookieString, 0)
+			gotPost, err := GetAlbumPostPage(cfg, tt.albumId, cookieString, 0, "asc")
 			assert.NoError(t, err)
 			assert.Subset(t, gotPost, tt.wantPost)
 		})

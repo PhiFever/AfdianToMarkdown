@@ -17,19 +17,19 @@ import (
 )
 
 // SavePostIfNotExist 检查文件是否存在，不存在则下载并保存文章
-func SavePostIfNotExist(cfg *config.Config, filePath string, article afdian.Post, authToken string, disableComment bool, converter *md.Converter) error {
-	_, err := os.Stat(filePath)
+func SavePostIfNotExist(cfg *config.Config, filePath string, article afdian.Post, authToken string, disableComment bool, converter *md.Converter) (skipped bool, err error) {
+	_, err = os.Stat(filePath)
 	fileExists := err == nil || os.IsExist(err)
 	if !fileExists {
 		slog.Info("Saving file:", "path", filePath)
 		content, err := afdian.GetPostContent(cfg, article.Url, authToken, converter)
 		if err != nil {
-			return err
+			return false, err
 		}
 		//TODO:不支持图文混排
 		picContent, err := getPictures(filePath, article)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		referUrl := strings.Replace(article.Url, "post", "p", 1)
@@ -39,18 +39,19 @@ func SavePostIfNotExist(cfg *config.Config, filePath string, article afdian.Post
 		if !disableComment {
 			commentString, hotCommentString, err := afdian.GetPostComment(cfg, article.Url, authToken)
 			if err != nil {
-				return err
+				return false, err
 			}
 			articleContent = fmt.Sprintf("%s\n\n%s\n\n%s", articleContent, hotCommentString, commentString)
 		}
 
 		if err := os.WriteFile(filePath, []byte(articleContent), os.ModePerm); err != nil {
-			return err
+			return false, err
 		}
 	} else {
 		log.Printf("File exists: %s", filePath)
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
 
 func getPictures(filePath string, article afdian.Post) (string, error) {
