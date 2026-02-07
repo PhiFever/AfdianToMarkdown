@@ -1,32 +1,40 @@
 package afdian
 
 import (
+	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/logger"
-	"AfdianToMarkdown/utils"
 	"fmt"
+	"testing"
+	"time"
+
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 	"golang.org/x/exp/slog"
-	"testing"
 )
 
 const q9adgId = "3f49234e3e8f11eb8f6152540025c377"
 
-var cookieString, authToken string
+var (
+	cookieString, authToken string
+	cfg                     *config.Config
+)
 
 func init() {
 	//localPath, _ := os.Getwd()
 	//执行测试前，先设置cookie路径为实际本地路径
 	slog.SetDefault(logger.SetupLogger())
-	utils.CookiePath = `D:\MyProject\Golang\AfdianToMarkdown\cookies.json`
-	SetHostUrl("afdian.com")
-	slog.Info("cookiePath:", "path", utils.CookiePath)
-	cookieString, authToken = GetCookies()
+	cfg = config.NewConfig("afdian.com", `D:\MyProject\Golang\AfdianToMarkdown\data`, `D:\MyProject\Golang\AfdianToMarkdown\cookies.json`)
+	slog.Info("cookiePath:", "path", cfg.CookiePath)
+	var err error
+	cookieString, authToken, err = GetCookies(cfg.CookiePath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load cookies: %v", err))
+	}
 }
 
 func getAlbumUrl(AlbumId string) string {
-	return fmt.Sprintf("%s/album/%s", HostUrl, AlbumId)
+	return fmt.Sprintf("%s/album/%s", cfg.HostUrl, AlbumId)
 }
 
 func TestGetAuthorId(t *testing.T) {
@@ -44,7 +52,7 @@ func TestGetAuthorId(t *testing.T) {
 			name: "q9adg",
 			args: args{
 				authorUrlSlug: "q9adg",
-				referer:       HostUrl,
+				referer:       cfg.HostUrl,
 				cookieString:  cookieString,
 			},
 			want: q9adgId,
@@ -52,7 +60,7 @@ func TestGetAuthorId(t *testing.T) {
 		{name: "深海巨狗",
 			args: args{
 				authorUrlSlug: "Arabian_nights",
-				referer:       HostUrl,
+				referer:       cfg.HostUrl,
 				cookieString:  cookieString,
 			},
 			want: "d7c0ebe2c83911ea8ad552540025c377",
@@ -60,7 +68,9 @@ func TestGetAuthorId(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, GetAuthorId(tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString), "GetAuthorId(%v, %v, %v)", tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
+			got, err := GetAuthorId(cfg, tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "GetAuthorId(%v, %v, %v)", tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
 		})
 	}
 }
@@ -81,7 +91,8 @@ func TestGetAuthorMotionUrlList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			authorArticleList, nextPublishSn := GetMotionUrlList(tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			authorArticleList, nextPublishSn, err := GetMotionUrlList(cfg, tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
+			assert.NoError(t, err)
 			assert.Equalf(t, tt.wantArticleList, authorArticleList, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 			assert.Equalf(t, tt.wantNextPublishSn, nextPublishSn, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 		})
@@ -103,7 +114,7 @@ func TestGetAlbumList(t *testing.T) {
 			name: "q9adg",
 			args: args{
 				userId:       q9adgId,
-				referer:      HostUrl,
+				referer:      cfg.HostUrl,
 				cookieString: cookieString,
 			},
 			want: []Album{
@@ -123,7 +134,8 @@ func TestGetAlbumList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotList := GetAlbumList(tt.args.userId, tt.args.referer, tt.args.cookieString)
+			gotList, err := GetAlbumList(cfg, tt.args.userId, tt.args.referer, tt.args.cookieString)
+			assert.NoError(t, err)
 			for _, wantAlbum := range tt.want {
 				assert.Contains(t, gotList, wantAlbum, "GetAlbumList(%v, %v, %v) not contains want album: %s", tt.args.userId, tt.args.referer, tt.args.cookieString, wantAlbum)
 			}
@@ -131,47 +143,59 @@ func TestGetAlbumList(t *testing.T) {
 	}
 }
 
-func TestGetAlbumArticleList(t *testing.T) {
-	type args struct {
-		albumId   string
-		authToken string
-	}
+func TestGetAlbumInfo(t *testing.T) {
 	tests := []struct {
 		name          string
-		args          args
+		albumId       string
 		wantUrlSlug   string
 		wantAlbumName string
-		wantPost      []Post
 	}{
-
 		{
-			name: "阿牟AMFIG",
-			args: args{
-				albumId:   "aa82d81c88f711edb68f52540025c377",
-				authToken: authToken,
-			},
+			name:          "阿牟AMFIG",
+			albumId:       "aa82d81c88f711edb68f52540025c377",
 			wantUrlSlug:   "AMFIG",
 			wantAlbumName: "版本更新记录",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := GetAlbumInfo(cfg, tt.albumId, cookieString)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantUrlSlug, info.AuthorUrlSlug)
+			assert.Equal(t, tt.wantAlbumName, info.AlbumName)
+			assert.Greater(t, info.PostCount, int64(0))
+		})
+	}
+}
+
+func TestGetAlbumPostPage(t *testing.T) {
+	tests := []struct {
+		name     string
+		albumId  string
+		wantPost []Post
+	}{
+		{
+			name:    "阿牟AMFIG",
+			albumId: "aa82d81c88f711edb68f52540025c377",
 			wantPost: []Post{
 				{
-					Name:     "罗德里[2.1.10]已发布(2025-06-01)",
-					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/527d91b23e9311f0bddb52540025c377",
-					Pictures: []string(nil),
+					Name:     "游戏更新日志 2022-12-30",
+					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/cf0064c088f711edb42a52540025c377",
+					Pictures: []string(nil), PublishTime: time.Date(2022, time.December, 31, 18, 42, 22, 0, time.Local),
 				},
 				{
-					Name:     "罗德里[2.1.9]已发布(2025-05-26)",
-					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/b07905ee3a0611f0ba0d52540025c377",
-					Pictures: []string{"https://pic1.afdiancdn.com/user/104acec41aa411edbf6152540025c377/common/6cdc5f7c0733550298ad0bb650cf029e_w1280_h1280_s14.png"},
+					Name:     "版本更新1.0.1 2023-01-13 (附游戏安装包(安卓版))",
+					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/77d2cdd8935a11ed9ebb5254001e7c00",
+					Pictures: []string(nil), PublishTime: time.Date(2023, time.January, 13, 23, 53, 48, 0, time.Local),
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUrlSlug, gotAlbumName, gotPost := GetAlbumPostList(tt.args.albumId, tt.args.authToken)
-			assert.Equalf(t, tt.wantUrlSlug, gotUrlSlug, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
-			assert.Equalf(t, tt.wantAlbumName, gotAlbumName, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
-			assert.Subset(t, gotPost, tt.wantPost, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
+			gotPost, err := GetAlbumPostPage(cfg, tt.albumId, cookieString, 0, "asc")
+			assert.NoError(t, err)
+			assert.Subset(t, gotPost, tt.wantPost)
 		})
 	}
 }
@@ -191,7 +215,9 @@ func TestGetArticleContent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, getPostContent(tt.args.articleUrl, tt.args.authToken, tt.args.converter), "getPostContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
+			got, err := GetPostContent(cfg, tt.args.articleUrl, tt.args.authToken, tt.args.converter)
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "getPostContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
 		})
 	}
 }
@@ -211,7 +237,8 @@ func TestGetArticleComment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotCommentString, gotHotCommentString := GetPostComment(tt.args.articleUrl, tt.args.cookieString)
+			gotCommentString, gotHotCommentString, err := GetPostComment(cfg, tt.args.articleUrl, tt.args.cookieString)
+			assert.NoError(t, err)
 			assert.Equalf(t, tt.wantCommentString, gotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
 			assert.Equalf(t, tt.wantHotCommentString, gotHotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
 		})

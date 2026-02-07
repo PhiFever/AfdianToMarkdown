@@ -2,7 +2,7 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/PhiFever/AfdianToMarkdown/total)
 ## AfdianToMarkdown
 
-爱发电(afdian.com)爬虫，用于下载爱发电作者的动态和作品集并保存为markdown文件（目前只能保存纯文本内容，不支持保存图片）。
+爱发电(afdian.com)爬虫，用于下载爱发电作者的动态和作品集并保存为markdown文件。
 
 **！！！该软件不能直接帮你免费爬取订阅后才能查看的内容！！！**
 
@@ -18,13 +18,21 @@
 
 **注意主站域名可能需要手动指定（默认为afdian.com)**
 
+### 全局参数
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--host` | 主站域名，如访问不通可自行更改 | `afdian.com` |
+| `--dir` | 数据存储目录 | 程序所在目录下的 `data` 文件夹 |
+| `--cookie` | cookies.json 文件路径 | 程序所在目录下的 `cookies.json` |
+| `--disable_comment` | 为 true 时不下载评论 | `false` |
+| `--debug` | 启用调试日志 | `false` |
+
 ### 构建
 
 如果你不需要对源码进行开发，请跳至下一节。
 
-- 参见`Makefile`
-
-- 本程序在go1.23下构建，如无编译环境，也可到release页面自行下载对应的可执行文件
+- go build
 
 ### 帮助
 ```
@@ -64,11 +72,19 @@ $ .\AfdianToMarkdown.exe -h
 ```
 
 #### 更新所有已经下载的作者的动态和作品集
-1. 需要对应的作者目录下具有`motions`目录
+1. 需要对应的作者目录下具有`motions`目录，会完全比对所有已发布的动态和作品集，下载缺失的部分。对于已经下载的部分，如果标题或内容发生了变化则不会更新。
 2. 不会覆盖已经下载的文件，所以也不会更新评论。可以通过删除文件来强制更新
 
 ```shell
 .\AfdianToMarkdown.exe --host="ifdian.net" update
+```
+
+**快速更新**
+
+使用 `--quick` 参数，遇到已存在的文件时跳过剩余分页，适合日常增量更新：
+
+```shell
+.\AfdianToMarkdown.exe update --quick
 ```
 
 #### 下载任意作者的单个作品集
@@ -78,6 +94,16 @@ $ .\AfdianToMarkdown.exe -h
 ```
 
 ### 更新日志
+
+#### v1.0.0
+
+**Breaking Change：本版本的数据目录结构和文件命名格式与旧版不兼容，无法与之前保存的数据互通，需要重新下载。**
+
+1. 数据目录独立：新增 --dir 和 --cookie 参数，数据存储目录和 cookie 路径可分别指定，数据统一存储在 data/ 目录下
+2. 文件命名改进：文件名格式改为 {yyyy-mm-dd_hh_mm_ss}_{标题}.md，避免作者删帖导致序号错位和重复下载
+3. 流式下载：列表 API 返回一页后立即下载该页文章，不再等待收集完整列表
+4. 快速更新：update 子命令添加 --quick 参数，遇到已存在文件时跳过剩余分页，适合日常增量更新
+5. 新增 --debug 全局参数，启用调试日志
 
 #### v0.5.0
 

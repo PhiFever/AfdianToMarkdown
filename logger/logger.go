@@ -156,7 +156,7 @@ func (h *ColoredHandler) formatAttr(attr slog.Attr) string {
 }
 
 // SetupLogger 创建配置好的 logger
-func SetupLogger() *slog.Logger {
-	handler := NewColoredHandler(slog.LevelDebug)
+func SetupLogger(level slog.Level) *slog.Logger {
+	handler := NewColoredHandler(level)
 	return slog.New(handler)
 }
