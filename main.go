@@ -26,6 +26,7 @@ var (
 	cookieString, authToken string
 	disableComment          bool
 	quickUpdate             bool
+	debugMode               bool
 
 	version string
 	commit  string
@@ -35,7 +36,6 @@ var (
 )
 
 func main() {
-	slog.SetDefault(logger.SetupLogger())
 	//记录开始时间
 	startTime := time.Now()
 	cmd := &cli.Command{
@@ -52,8 +52,15 @@ func main() {
 			&cli.StringFlag{Name: "dir", Destination: &dataDirFlag, Value: "", Usage: "数据存储目录，默认为程序所在目录下的 data 文件夹"},
 			&cli.StringFlag{Name: "cookie", Destination: &cookiePathFlag, Value: "", Usage: "cookies.json 文件路径，默认为程序所在目录下的 cookies.json"},
 			&cli.BoolFlag{Name: "disable_comment", Destination: &disableComment, Value: false, Usage: "为true时不下载评论"},
+			&cli.BoolFlag{Name: "debug", Destination: &debugMode, Value: false, Usage: "启用调试日志"},
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+			// 根据 --debug 参数设置日志级别
+			logLevel := slog.LevelInfo
+			if debugMode {
+				logLevel = slog.LevelDebug
+			}
+			slog.SetDefault(logger.SetupLogger(logLevel))
 			// 解析默认目录
 			appDir, err := utils.ResolveAppDir()
 			if err != nil {
