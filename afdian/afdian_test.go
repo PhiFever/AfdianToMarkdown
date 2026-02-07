@@ -4,11 +4,13 @@ import (
 	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/logger"
 	"fmt"
+	"testing"
+	"time"
+
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 	"golang.org/x/exp/slog"
-	"testing"
 )
 
 const q9adgId = "3f49234e3e8f11eb8f6152540025c377"
@@ -141,48 +143,59 @@ func TestGetAlbumList(t *testing.T) {
 	}
 }
 
-func TestGetAlbumArticleList(t *testing.T) {
-	type args struct {
-		albumId   string
-		authToken string
-	}
+func TestGetAlbumInfo(t *testing.T) {
 	tests := []struct {
 		name          string
-		args          args
+		albumId       string
 		wantUrlSlug   string
 		wantAlbumName string
-		wantPost      []Post
 	}{
-
 		{
-			name: "阿牟AMFIG",
-			args: args{
-				albumId:   "aa82d81c88f711edb68f52540025c377",
-				authToken: authToken,
-			},
+			name:          "阿牟AMFIG",
+			albumId:       "aa82d81c88f711edb68f52540025c377",
 			wantUrlSlug:   "AMFIG",
 			wantAlbumName: "版本更新记录",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := GetAlbumInfo(cfg, tt.albumId, cookieString)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantUrlSlug, info.AuthorUrlSlug)
+			assert.Equal(t, tt.wantAlbumName, info.AlbumName)
+			assert.Greater(t, info.PostCount, int64(0))
+		})
+	}
+}
+
+func TestGetAlbumPostPage(t *testing.T) {
+	tests := []struct {
+		name     string
+		albumId  string
+		wantPost []Post
+	}{
+		{
+			name:    "阿牟AMFIG",
+			albumId: "aa82d81c88f711edb68f52540025c377",
 			wantPost: []Post{
 				{
-					Name:     "罗德里[2.1.10]已发布(2025-06-01)",
-					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/527d91b23e9311f0bddb52540025c377",
-					Pictures: []string(nil),
+					Name:     "游戏更新日志 2022-12-30",
+					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/cf0064c088f711edb42a52540025c377",
+					Pictures: []string(nil), PublishTime: time.Date(2022, time.December, 31, 18, 42, 22, 0, time.Local),
 				},
 				{
-					Name:     "罗德里[2.1.9]已发布(2025-05-26)",
-					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/b07905ee3a0611f0ba0d52540025c377",
-					Pictures: []string{"https://pic1.afdiancdn.com/user/104acec41aa411edbf6152540025c377/common/6cdc5f7c0733550298ad0bb650cf029e_w1280_h1280_s14.png"},
+					Name:     "版本更新1.0.1 2023-01-13 (附游戏安装包(安卓版))",
+					Url:      "https://afdian.com/album/aa82d81c88f711edb68f52540025c377/77d2cdd8935a11ed9ebb5254001e7c00",
+					Pictures: []string(nil), PublishTime: time.Date(2023, time.January, 13, 23, 53, 48, 0, time.Local),
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUrlSlug, gotAlbumName, gotPost, err := GetAlbumPostList(cfg, tt.args.albumId, tt.args.authToken)
+			gotPost, err := GetAlbumPostPage(cfg, tt.albumId, cookieString, 0)
 			assert.NoError(t, err)
-			assert.Equalf(t, tt.wantUrlSlug, gotUrlSlug, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
-			assert.Equalf(t, tt.wantAlbumName, gotAlbumName, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
-			assert.Subset(t, gotPost, tt.wantPost, "GetAlbumArticleList(%v, %v)", tt.args.albumId, tt.args.authToken)
+			assert.Subset(t, gotPost, tt.wantPost)
 		})
 	}
 }

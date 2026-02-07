@@ -84,48 +84,60 @@ func GetAlbumList(cfg *config.Config, userId string, referer string, cookieStrin
 	return albumList, nil
 }
 
-func GetAlbumPostList(cfg *config.Config, albumId string, cookieString string) (authorUrlSlug string, albumName string, albumPostList []Post, err error) {
-	postCountApiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", cfg.HostUrl, albumId)
+// AlbumInfo 作品集元信息
+type AlbumInfo struct {
+	AuthorUrlSlug string
+	AlbumName     string
+	PostCount     int64
+}
+
+// GetAlbumInfo 获取作品集元信息（作者、名称、文章数）
+func GetAlbumInfo(cfg *config.Config, albumId string, cookieString string) (*AlbumInfo, error) {
+	apiUrl := fmt.Sprintf("%s/api/user/get-album-info?album_id=%s", cfg.HostUrl, albumId)
 	referer := fmt.Sprintf("%s/album/%s", cfg.HostUrl, albumId)
 
-	postCountBodyText, err := NewRequestGet(cfg.Host, postCountApiUrl, cookieString, referer)
+	body, err := NewRequestGet(cfg.Host, apiUrl, cookieString, referer)
 	if err != nil {
-		return "", "", nil, err
+		return nil, err
 	}
-	albumName = gjson.GetBytes(postCountBodyText, "data.album.title").String()
-	postCount := gjson.GetBytes(postCountBodyText, "data.album.post_count").Int()
-	authorUrlSlug = gjson.GetBytes(postCountBodyText, "data.album.user.url_slug").String()
+	return &AlbumInfo{
+		AuthorUrlSlug: gjson.GetBytes(body, "data.album.user.url_slug").String(),
+		AlbumName:     gjson.GetBytes(body, "data.album.title").String(),
+		PostCount:     gjson.GetBytes(body, "data.album.post_count").Int(),
+	}, nil
+}
 
-	var i int64
-	for i = 0; i < postCount; i += 10 {
-		apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", cfg.HostUrl, albumId, i)
-		body, err := NewRequestGet(cfg.Host, apiUrl, cookieString, referer)
-		if err != nil {
-			return "", "", nil, err
+// GetAlbumPostPage 获取作品集的一页文章列表
+func GetAlbumPostPage(cfg *config.Config, albumId string, cookieString string, lastRank int64) ([]Post, error) {
+	referer := fmt.Sprintf("%s/album/%s", cfg.HostUrl, albumId)
+	apiUrl := fmt.Sprintf("%s/api/user/get-album-post?album_id=%s&lastRank=%d&rankOrder=asc&rankField=rank", cfg.HostUrl, albumId, lastRank)
+	body, err := NewRequestGet(cfg.Host, apiUrl, cookieString, referer)
+	if err != nil {
+		return nil, err
+	}
+
+	var postList []Post
+	albumPostListJson := gjson.GetBytes(body, "data.list")
+	albumPostListJson.ForEach(func(key, value gjson.Result) bool {
+		postId := value.Get("post_id").String()
+		postUrl, _ := url.JoinPath(cfg.HostUrl, "album", albumId, postId)
+
+		var pictures []string
+		for _, result := range value.Get("pics").Array() {
+			pictures = append(pictures, result.String())
 		}
-
-		albumPostListJson := gjson.GetBytes(body, "data.list")
-		albumPostListJson.ForEach(func(key, value gjson.Result) bool {
-			postId := value.Get("post_id").String()
-			postUrl, _ := url.JoinPath(cfg.HostUrl, "album", albumId, postId)
-
-			var pictures []string
-			for _, result := range value.Get("pics").Array() {
-				pictures = append(pictures, result.String())
-			}
-			publishTimeStamp := cast.ToInt64(value.Get("publish_time").String())
-			publishTime := time.Unix(publishTimeStamp, 0)
-			albumPostList = append(albumPostList, Post{
-				Name:        utils.ToSafeFilename(value.Get("title").String()),
-				Url:         postUrl,
-				Pictures:    pictures,
-				PublishTime: publishTime,
-			})
-			return true
+		publishTimeStamp := cast.ToInt64(value.Get("publish_time").String())
+		publishTime := time.Unix(publishTimeStamp, 0)
+		postList = append(postList, Post{
+			Name:        utils.ToSafeFilename(value.Get("title").String()),
+			Url:         postUrl,
+			Pictures:    pictures,
+			PublishTime: publishTime,
 		})
-	}
+		return true
+	})
 
-	return authorUrlSlug, albumName, albumPostList, nil
+	return postList, nil
 }
 
 // GetPostContent 获取文章正文内容

@@ -27,32 +27,31 @@ func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, a
 	}
 	slog.Info("作者主页", "authorHostUrl", authorHost)
 
-	//获取作者作品列表
+	//获取作者作品列表，边获取边下载
+	converter := md.NewConverter("", true, nil)
 	prevPublishSn := ""
-	var postList []afdian.Post
+	totalCount := 0
 	for {
-		//获取作者作品列表
 		subArticleList, publishSn, err := afdian.GetMotionUrlList(cfg, authorUrlSlug, cookieString, prevPublishSn)
 		if err != nil {
 			return err
 		}
-		postList = append(postList, subArticleList...)
+
+		for _, article := range subArticleList {
+			timePrefix := article.PublishTime.Format("2006-01-02_15_04_05")
+			filePath := path.Join(cfg.DataDir, authorUrlSlug, authorDir, timePrefix+"_"+article.Name+".md")
+			if err := storage.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
+				return err
+			}
+		}
+
+		totalCount += len(subArticleList)
 		prevPublishSn = publishSn
 		if publishSn == "" {
 			break
 		}
 		time.Sleep(time.Millisecond * time.Duration(30))
 	}
-	//slog.Info("postList:", utils.ToJSON(postList))
-	slog.Info("postList length:", len(postList))
-
-	converter := md.NewConverter("", true, nil)
-	for _, article := range postList {
-		timePrefix := article.PublishTime.Format("2006-01-02_15_04_05")
-		filePath := path.Join(cfg.DataDir, authorUrlSlug, authorDir, timePrefix+"_"+article.Name+".md")
-		if err := storage.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter); err != nil {
-			return err
-		}
-	}
+	slog.Info("postList length:", "count", totalCount)
 	return nil
 }
