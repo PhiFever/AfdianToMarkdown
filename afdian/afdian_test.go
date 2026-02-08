@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 	"golang.org/x/exp/slog"
@@ -23,7 +22,7 @@ var (
 func init() {
 	//localPath, _ := os.Getwd()
 	//执行测试前，先设置cookie路径为实际本地路径
-	slog.SetDefault(logger.SetupLogger())
+	slog.SetDefault(logger.SetupLogger(slog.LevelInfo))
 	cfg = config.NewConfig("afdian.com", `D:\MyProject\Golang\AfdianToMarkdown\data`, `D:\MyProject\Golang\AfdianToMarkdown\cookies.json`)
 	slog.Info("cookiePath:", "path", cfg.CookiePath)
 	var err error
@@ -71,30 +70,6 @@ func TestGetAuthorId(t *testing.T) {
 			got, err := GetAuthorId(cfg, tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
 			assert.NoError(t, err)
 			assert.Equalf(t, tt.want, got, "GetAuthorId(%v, %v, %v)", tt.args.authorUrlSlug, tt.args.referer, tt.args.cookieString)
-		})
-	}
-}
-
-func TestGetAuthorMotionUrlList(t *testing.T) {
-	type args struct {
-		userName      string
-		cookieString  string
-		prevPublishSn string
-	}
-	tests := []struct {
-		name              string
-		args              args
-		wantArticleList   []Post
-		wantNextPublishSn string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			authorArticleList, nextPublishSn, err := GetMotionUrlList(cfg, tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
-			assert.NoError(t, err)
-			assert.Equalf(t, tt.wantArticleList, authorArticleList, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
-			assert.Equalf(t, tt.wantNextPublishSn, nextPublishSn, "GetMotionUrlList(%v, %v, %v)", tt.args.userName, tt.args.cookieString, tt.args.prevPublishSn)
 		})
 	}
 }
@@ -200,65 +175,36 @@ func TestGetAlbumPostPage(t *testing.T) {
 	}
 }
 
-func TestGetArticleContent(t *testing.T) {
-	type args struct {
-		articleUrl string
-		authToken  string
-		converter  *md.Converter
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetPostContent(cfg, tt.args.articleUrl, tt.args.authToken, tt.args.converter)
-			assert.NoError(t, err)
-			assert.Equalf(t, tt.want, got, "getPostContent(%v, %v, %v)", tt.args.articleUrl, tt.args.authToken, tt.args.converter)
-		})
-	}
-}
-
-func TestGetArticleComment(t *testing.T) {
-	type args struct {
-		articleUrl   string
-		cookieString string
-	}
-	tests := []struct {
-		name                 string
-		args                 args
-		wantCommentString    string
-		wantHotCommentString string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotCommentString, gotHotCommentString, err := GetPostComment(cfg, tt.args.articleUrl, tt.args.cookieString)
-			assert.NoError(t, err)
-			assert.Equalf(t, tt.wantCommentString, gotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
-			assert.Equalf(t, tt.wantHotCommentString, gotHotCommentString, "GetPostComment(%v, %v)", tt.args.articleUrl, tt.args.cookieString)
-		})
-	}
-}
-
 func Test_getCommentString(t *testing.T) {
-	type args struct {
-		commentJson gjson.Result
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, getCommentString(tt.args.commentJson), "getCommentString(%v)", tt.args.commentJson)
-		})
-	}
+	t.Run("单条评论", func(t *testing.T) {
+		json := `[{"user":{"name":"张三"},"publish_time":"1700000000","content":"好文章"}]`
+		got := getCommentString(gjson.Parse(json))
+		assert.Contains(t, got, "[0]")
+		assert.Contains(t, got, "by 张三")
+		assert.Contains(t, got, "好文章")
+		assert.Contains(t, got, "2023-11-1")
+		assert.NotContains(t, got, "回复")
+	})
+
+	t.Run("带回复的评论", func(t *testing.T) {
+		json := `[{"user":{"name":"李四"},"publish_time":"1700000000","content":"同意","reply_user":{"name":"张三"}}]`
+		got := getCommentString(gjson.Parse(json))
+		assert.Contains(t, got, "by 李四")
+		assert.Contains(t, got, "> 回复 张三: ")
+		assert.Contains(t, got, "同意")
+	})
+
+	t.Run("多条评论序号递增", func(t *testing.T) {
+		json := `[{"user":{"name":"A"},"publish_time":"1700000000","content":"第一条"},{"user":{"name":"B"},"publish_time":"1700000100","content":"第二条"}]`
+		got := getCommentString(gjson.Parse(json))
+		assert.Contains(t, got, "[0]")
+		assert.Contains(t, got, "[1]")
+		assert.Contains(t, got, "by A")
+		assert.Contains(t, got, "by B")
+	})
+
+	t.Run("空列表", func(t *testing.T) {
+		got := getCommentString(gjson.Parse(`[]`))
+		assert.Empty(t, got)
+	})
 }
