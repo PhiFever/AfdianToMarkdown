@@ -90,3 +90,10 @@ CLI (main.go) → config.Config 创建
 - 测试直接调用真实 API，需要有效 cookies.json 且测试中硬编码了 Windows 路径
 - `ResolveAppDir()` 通过可执行文件路径（排除 go-build 临时目录）或工作目录推断程序目录，数据目录和 cookie 路径可通过 `--dir` 和 `--cookie` 参数独立指定
 - 版本号通过 goreleaser ldflags 注入 `main.version`/`main.commit`/`main.date`
+
+## Active Technologies
+- Go 1.24 + `urfave/cli/v3`（CLI 框架）、`mark3labs/mcp-go v0.43.2`（MCP SDK） (001-mcp-server-base)
+- 文件系统（Markdown 文件，只读） (001-mcp-server-base)
+
+## Recent Changes
+- 001-mcp-server-base: Added Go 1.24 + `urfave/cli/v3`（CLI 框架）、`mark3labs/mcp-go v0.43.2`（MCP SDK）
