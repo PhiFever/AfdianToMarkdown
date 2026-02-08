@@ -140,11 +140,16 @@ func main() {
 					}
 					for _, author := range authors {
 						slog.Info("Find exist author: ", "authorName", author)
-						if err := motion.GetMotions(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
-							return err
+						hasMotions, hasAlbums := utils.CheckAuthorContent(cfg.DataDir, author)
+						if hasMotions {
+							if err := motion.GetMotions(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
+								return err
+							}
 						}
-						if err := album.GetAlbums(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
-							return err
+						if hasAlbums {
+							if err := album.GetAlbums(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
+								return err
+							}
 						}
 					}
 					return nil

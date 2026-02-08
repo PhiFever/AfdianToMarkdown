@@ -77,28 +77,42 @@ func ToSafeFilename(in string) string {
 	return rt
 }
 
-// CheckAndListAuthors 通过检查 dataDir 下是否有二级文件夹 motions 来获取所有的作者名
-// 如果有，则返回所有一级文件夹名
+// CheckAuthorContent 检查作者目录下是否存在 motions 文件夹和作品集文件夹
+// hasMotions: 存在 motions 子目录
+// hasAlbums: 存在除 motions 以外的子目录
+func CheckAuthorContent(dataDir, author string) (hasMotions, hasAlbums bool) {
+	authorDir := filepath.Join(dataDir, author)
+	files, err := os.ReadDir(authorDir)
+	if err != nil {
+		return false, false
+	}
+	for _, file := range files {
+		if !file.IsDir() {
+			continue
+		}
+		if file.Name() == "motions" {
+			hasMotions = true
+		} else {
+			hasAlbums = true
+		}
+	}
+	return
+}
+
+// CheckAndListAuthors 返回 dataDir 下所有子文件夹名作为作者列表
 func CheckAndListAuthors(dataDir string) ([]string, error) {
 	var folders []string
 
-	// 读取数据目录下的所有文件和文件夹
 	files, err := os.ReadDir(dataDir)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, file := range files {
-		//fmt.Println("file: ", file.Name())
 		if file.IsDir() {
-			// 检查是否存在二级文件夹 motions
-			motionPath := filepath.Join(dataDir, file.Name(), "motions")
-			if _, err := os.Stat(motionPath); err == nil {
-				folders = append(folders, file.Name())
-			}
+			folders = append(folders, file.Name())
 		}
 	}
 
-	//fmt.Println("folders: ", folders)
 	return folders, nil
 }
