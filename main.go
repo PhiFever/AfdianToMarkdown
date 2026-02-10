@@ -6,10 +6,12 @@ import (
 	"AfdianToMarkdown/afdian/motion"
 	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/logger"
+	mcpserver "AfdianToMarkdown/mcp"
 	"AfdianToMarkdown/utils"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -34,6 +36,20 @@ var (
 
 	cfg *config.Config
 )
+
+// isMcpSubcommand 检查当前是否为 mcp 子命令
+func isMcpSubcommand() bool {
+	for _, arg := range os.Args[1:] {
+		if arg == "mcp" {
+			return true
+		}
+		// 跳过 flag 参数
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+	}
+	return false
+}
 
 func main() {
 	//记录开始时间
@@ -80,6 +96,12 @@ func main() {
 			}
 
 			cfg = config.NewConfig(afdianHost, dataDir, cookiePath)
+
+			// mcp 子命令不需要加载 Cookie
+			if isMcpSubcommand() {
+				return ctx, nil
+			}
+
 			var err2 error
 			cookieString, authToken, err2 = afdian.GetCookies(cfg.CookiePath)
 			if err2 != nil {
@@ -88,7 +110,10 @@ func main() {
 			return ctx, nil
 		},
 		After: func(ctx context.Context, cmd *cli.Command) error {
-			// 在这里可以根据需要做全局参数的后处理
+			// mcp 子命令是长驻进程，不需要打印耗时
+			if isMcpSubcommand() {
+				return nil
+			}
 			//记录结束时间
 			endTime := time.Now()
 			//计算执行时间，单位为秒
@@ -153,6 +178,16 @@ func main() {
 						}
 					}
 					return nil
+				},
+			},
+			{
+				Name:  "mcp",
+				Usage: "以 MCP Server 模式启动，通过 stdio 提供文档检索服务",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					slog.Info("MCP Server 启动中", "dataDir", cfg.DataDir)
+					s := mcpserver.NewServer(cfg.DataDir, version)
+					slog.Info("MCP Server 已就绪，等待连接...")
+					return mcpserver.Serve(s)
 				},
 			},
 		},

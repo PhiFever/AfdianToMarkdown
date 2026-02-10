@@ -1,0 +1,20 @@
+# Go 构建产物
+*.exe
+*.test
+*.out
+vendor/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# IDE
+.vscode/
+.idea/
+
+# 环境和数据
+.env*
+data/
+cookies.json

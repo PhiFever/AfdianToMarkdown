@@ -13,8 +13,8 @@
 
 **Purpose**: 添加 mcp-go 依赖，创建包目录结构
 
-- [ ] T001 Add `github.com/mark3labs/mcp-go` dependency via `go get github.com/mark3labs/mcp-go@v0.43.2`
-- [ ] T002 Create `mcp/` package directory with empty files: `mcp/server.go`, `mcp/tools.go`, `mcp/search.go`
+- [x] T001 Add `github.com/mark3labs/mcp-go` dependency via `go get github.com/mark3labs/mcp-go@v0.43.2`
+- [x] T002 Create `mcp/` package directory with empty files: `mcp/server.go`, `mcp/tools.go`, `mcp/search.go`
 
 ---
 
@@ -24,12 +24,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Define data model structs (`PostInfo`, `AuthorPosts`, `SearchResult`, `SearchResponse`) in `storage/reader.go`
-- [ ] T004 Implement `ListAuthors(dataDir string) ([]string, error)` in `storage/reader.go` — scan data directory for author subdirectories, filter out `.assets/` and non-directory entries
-- [ ] T005 Implement `ParsePostInfo(fileName, category, authorDir string) PostInfo` helper in `storage/reader.go` — extract title and publish time from filename format `{YYYY-MM-DD_HH_MM_SS}_{SafeTitle}.md`
-- [ ] T006 Implement `ListPosts(dataDir, author string) (*AuthorPosts, error)` in `storage/reader.go` — scan motions/ and album subdirectories, return grouped post lists with relative paths
-- [ ] T007 Implement `ReadPost(dataDir, relativePath string) (string, error)` in `storage/reader.go` — read a single markdown file by relative path, return full content
-- [ ] T008 Implement `FindPostByTitle(dataDir, author, titleKeyword string) ([]PostInfo, error)` in `storage/reader.go` — case-insensitive title substring match across all posts of an author
+- [x] T003 Define data model structs (`PostInfo`, `AuthorPosts`, `SearchResult`, `SearchResponse`) in `storage/reader.go`
+- [x] T004 Implement `ListAuthors(dataDir string) ([]string, error)` in `storage/reader.go` — scan data directory for author subdirectories, filter out `.assets/` and non-directory entries
+- [x] T005 Implement `ParsePostInfo(fileName, category, authorDir string) PostInfo` helper in `storage/reader.go` — extract title and publish time from filename format `{YYYY-MM-DD_HH_MM_SS}_{SafeTitle}.md`
+- [x] T006 Implement `ListPosts(dataDir, author string) (*AuthorPosts, error)` in `storage/reader.go` — scan motions/ and album subdirectories, return grouped post lists with relative paths
+- [x] T007 Implement `ReadPost(dataDir, relativePath string) (string, error)` in `storage/reader.go` — read a single markdown file by relative path, return full content
+- [x] T008 Implement `FindPostByTitle(dataDir, author, titleKeyword string) ([]PostInfo, error)` in `storage/reader.go` — case-insensitive title substring match across all posts of an author
 
 **Checkpoint**: storage/reader.go complete — all file I/O operations available for Tool handlers
 
@@ -43,10 +43,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Modify `Before` hook in `main.go` to conditionally skip cookie loading when the subcommand is `mcp` — only initialize logger and Config (dataDir), skip `afdian.GetCookies()` call
-- [ ] T010 [US1] Implement `NewServer(cfg *config.Config, version string) *server.MCPServer` in `mcp/server.go` — create MCP server with `server.NewMCPServer()`, register all 4 tools with their input schemas per contracts/mcp-tools.md, return server instance
-- [ ] T011 [US1] Implement `Serve(s *server.MCPServer) error` in `mcp/server.go` — call `server.ServeStdio(s)` to start stdio transport
-- [ ] T012 [US1] Add `mcp` subcommand in `main.go` — register alongside existing `motions`/`albums`/`update` commands, action calls `mcp.NewServer(cfg, version)` then `mcp.Serve(s)`, accepts `--dir` flag (via global Before hook)
+- [x] T009 [US1] Modify `Before` hook in `main.go` to conditionally skip cookie loading when the subcommand is `mcp` — only initialize logger and Config (dataDir), skip `afdian.GetCookies()` call
+- [x] T010 [US1] Implement `NewServer(cfg *config.Config, version string) *server.MCPServer` in `mcp/server.go` — create MCP server with `server.NewMCPServer()`, register all 4 tools with their input schemas per contracts/mcp-tools.md, return server instance
+- [x] T011 [US1] Implement `Serve(s *server.MCPServer) error` in `mcp/server.go` — call `server.ServeStdio(s)` to start stdio transport
+- [x] T012 [US1] Add `mcp` subcommand in `main.go` — register alongside existing `motions`/`albums`/`update` commands, action calls `mcp.NewServer(cfg, version)` then `mcp.Serve(s)`, accepts `--dir` flag (via global Before hook)
 - [ ] T013 [US1] Build and verify connection — run `go build -o AfdianToMarkdown.exe .`, add MCP config to Claude Code, confirm server connects and tool list is visible
 
 **Checkpoint**: MCP Server 可启动、可连接，Claude Code 能看到 4 个 Tool（handler 返回 placeholder 响应即可）
@@ -61,8 +61,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [P] [US2] Implement `handleListAuthors` handler in `mcp/tools.go` — call `storage.ListAuthors(cfg.DataDir)`, format output as per contract (count + bulleted list), handle empty/missing directory edge cases
-- [ ] T015 [P] [US2] Implement `handleListPosts` handler in `mcp/tools.go` — extract `author` param via `request.RequireString("author")`, call `storage.ListPosts()`, format output with motions section and per-album sections showing `[date] title → relative/path`, handle author-not-found error
+- [x] T014 [P] [US2] Implement `handleListAuthors` handler in `mcp/tools.go` — call `storage.ListAuthors(cfg.DataDir)`, format output as per contract (count + bulleted list), handle empty/missing directory edge cases
+- [x] T015 [P] [US2] Implement `handleListPosts` handler in `mcp/tools.go` — extract `author` param via `request.RequireString("author")`, call `storage.ListPosts()`, format output with motions section and per-album sections showing `[date] title → relative/path`, handle author-not-found error
 - [ ] T016 [US2] Verify in Claude Code — ask Claude to list authors and list posts for a specific author, confirm output matches contract format
 
 **Checkpoint**: 浏览功能完整，可在 Claude Code 中查看作者和文章列表
@@ -77,7 +77,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Implement `handleReadPost` handler in `mcp/tools.go` — support two modes: (1) if `path` param provided, call `storage.ReadPost(cfg.DataDir, path)` directly; (2) if `author`+`title` provided, call `storage.FindPostByTitle()` — if single match read and return content, if multiple matches return list for user to choose, if no match return error. Prepend file path header to output per contract
+- [x] T017 [US3] Implement `handleReadPost` handler in `mcp/tools.go` — support two modes: (1) if `path` param provided, call `storage.ReadPost(cfg.DataDir, path)` directly; (2) if `author`+`title` provided, call `storage.FindPostByTitle()` — if single match read and return content, if multiple matches return list for user to choose, if no match return error. Prepend file path header to output per contract
 - [ ] T018 [US3] Verify in Claude Code — read a post by path, read by author+title keyword, test multi-match scenario, test not-found scenario
 
 **Checkpoint**: 文章阅读功能完整，可通过路径或标题检索并阅读全文
@@ -92,9 +92,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Implement `Search(dataDir, query, author string, maxResults int) (*SearchResponse, error)` in `mcp/search.go` — walk markdown files (optionally filtered by author), read each file line by line, case-insensitive plain text match via `strings.Contains(strings.ToLower(...))`, collect matching lines with 3 lines context before/after, cap at maxResults, track total count for truncation indicator
-- [ ] T020 [US4] Implement `formatSearchResponse(resp *SearchResponse) string` helper in `mcp/search.go` — format output per contract: header with count, each result block with file path + line number + context lines (using `>` prefix for match line), truncation notice if applicable
-- [ ] T021 [US4] Implement `handleSearch` handler in `mcp/tools.go` — extract `query` (required) and `author` (optional) params, validate query not empty, call `Search(cfg.DataDir, query, author, 20)`, format and return result
+- [x] T019 [US4] Implement `Search(dataDir, query, author string, maxResults int) (*SearchResponse, error)` in `mcp/search.go` — walk markdown files (optionally filtered by author), read each file line by line, case-insensitive plain text match via `strings.Contains(strings.ToLower(...))`, collect matching lines with 3 lines context before/after, cap at maxResults, track total count for truncation indicator
+- [x] T020 [US4] Implement `formatSearchResponse(resp *SearchResponse) string` helper in `mcp/search.go` — format output per contract: header with count, each result block with file path + line number + context lines (using `>` prefix for match line), truncation notice if applicable
+- [x] T021 [US4] Implement `handleSearch` handler in `mcp/tools.go` — extract `query` (required) and `author` (optional) params, validate query not empty, call `Search(cfg.DataDir, query, author, 20)`, format and return result
 - [ ] T022 [US4] Verify in Claude Code — search for a known keyword, test with author filter, test empty result, test result truncation with common keyword
 
 **Checkpoint**: 搜索功能完整，可在 Claude Code 中搜索关键词并查看匹配片段
@@ -106,7 +106,7 @@
 **Purpose**: 最终验证和配置文档
 
 - [ ] T023 [P] Add Claude Code MCP configuration example to quickstart.md at `specs/001-mcp-server-base/quickstart.md` with actual built binary path
-- [ ] T024 Ensure `go build` succeeds with no warnings, verify all edge cases from spec (empty dir, missing author, special chars in filenames, large files, regex special chars in search query)
+- [x] T024 Ensure `go build` succeeds with no warnings, verify all edge cases from spec (empty dir, missing author, special chars in filenames, large files, regex special chars in search query)
 - [ ] T025 Run full end-to-end validation per quickstart.md — build, configure Claude Code, test all 4 tools in conversation
 
 ---
