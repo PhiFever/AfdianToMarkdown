@@ -93,6 +93,110 @@ $ .\AfdianToMarkdown.exe -h
 .\AfdianToMarkdown.exe album -u https://afdian.com/album/aaa
 ```
 
+### MCP Server 模式
+
+本程序支持作为 [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) 服务器运行，让 AI 助手（如 Claude Desktop）直接检索已下载的文档。
+
+MCP 模式不需要 cookies.json，仅对本地已下载的数据提供只读查询服务。
+
+#### 提供的工具
+
+| 工具 | 说明 |
+|------|------|
+| `list_authors` | 列出所有已下载的作者 |
+| `list_posts` | 列出指定作者的所有文章（动态和作品集） |
+| `read_post` | 读取指定文章的完整 Markdown 内容 |
+| `search` | 在已下载文档中全文搜索关键词 |
+
+#### stdio 模式（本地使用）
+
+适用于 Claude Desktop 等本地 MCP 客户端：
+
+```shell
+.\AfdianToMarkdown.exe mcp
+```
+
+使用 Claude Code 添加：
+
+```shell
+claude mcp add --transport stdio afdian -- /path/to/AfdianToMarkdown --dir /path/to/data mcp
+```
+
+或在 Claude Desktop 的 `claude_desktop_config.json` 中手动配置：
+
+```json
+{
+  "mcpServers": {
+    "afdian": {
+      "command": "/path/to/AfdianToMarkdown",
+      "args": ["--dir", "/path/to/data", "mcp"]
+    }
+  }
+}
+```
+
+#### HTTP 模式（远程/NAS 部署）
+
+适用于在 NAS 或服务器上长期运行，为远程 MCP 客户端提供服务：
+
+```shell
+# 默认监听 0.0.0.0:8080
+.\AfdianToMarkdown.exe mcp --http
+
+# 指定监听地址和端口
+.\AfdianToMarkdown.exe mcp --http --addr 127.0.0.1:9090
+```
+
+MCP 子命令参数：
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--http` | 以 HTTP Streamable 模式启动 | `false`（默认 stdio） |
+| `--addr` | HTTP 监听地址（格式: `host:port`） | `0.0.0.0:8080` |
+
+使用 Claude Code 添加远程服务器：
+
+```shell
+claude mcp add --transport http afdian http://<server-ip>:8080/mcp
+```
+
+或在 MCP 客户端配置文件中手动配置：
+
+```json
+{
+  "mcpServers": {
+    "afdian": {
+      "url": "http://<server-ip>:8080/mcp"
+    }
+  }
+}
+```
+
+#### NAS 部署示例
+
+配合 cron 定时更新内容，并通过 systemd 管理 MCP 服务：
+
+```ini
+# /etc/systemd/system/afdian-mcp.service
+[Unit]
+Description=AfdianToMarkdown MCP Server
+After=network.target
+
+[Service]
+ExecStart=/path/to/AfdianToMarkdown --dir /path/to/data mcp --http
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+cron 更新任务示例（每天凌晨 3 点更新，然后重启服务）：
+
+```
+0 3 * * * /path/to/AfdianToMarkdown --dir /path/to/data --cookie /path/to/cookies.json update && systemctl restart afdian-mcp
+```
+
 ### 更新日志
 
 #### v1.0.0

@@ -182,11 +182,18 @@ func main() {
 			},
 			{
 				Name:  "mcp",
-				Usage: "以 MCP Server 模式启动，通过 stdio 提供文档检索服务",
+				Usage: "以 MCP Server 模式启动，通过 stdio 或 HTTP 提供文档检索服务",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "http", Value: false, Usage: "以 HTTP Streamable 模式启动（默认为 stdio 模式）"},
+					&cli.StringFlag{Name: "addr", Value: "0.0.0.0:8080", Usage: "HTTP 监听地址（格式: host:port）"},
+				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					slog.Info("MCP Server 启动中", "dataDir", cfg.DataDir)
 					s := mcpserver.NewServer(cfg.DataDir, version)
 					slog.Info("MCP Server 已就绪，等待连接...")
+					if cmd.Bool("http") {
+						return mcpserver.ServeHTTP(s, cmd.String("addr"))
+					}
 					return mcpserver.Serve(s)
 				},
 			},

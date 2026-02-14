@@ -1,6 +1,13 @@
 package mcp
 
 import (
+	"context"
+	"golang.org/x/exp/slog"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -70,4 +77,28 @@ func NewServer(dataDir string, version string) *server.MCPServer {
 // Serve 以 stdio 传输模式启动 MCP Server
 func Serve(s *server.MCPServer) error {
 	return server.ServeStdio(s)
+}
+
+// ServeHTTP 以 HTTP Streamable 传输模式启动 MCP Server
+func ServeHTTP(s *server.MCPServer, addr string) error {
+	httpServer := server.NewStreamableHTTPServer(s)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		slog.Info("MCP HTTP Server 正在监听", "addr", addr, "endpoint", "/mcp")
+		errCh <- httpServer.Start(addr)
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		slog.Info("正在关闭 MCP HTTP Server...")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return httpServer.Shutdown(shutdownCtx)
+	}
 }
