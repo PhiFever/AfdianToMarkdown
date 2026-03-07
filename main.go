@@ -4,6 +4,7 @@ import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/afdian/album"
 	"AfdianToMarkdown/afdian/motion"
+	"AfdianToMarkdown/afdian/shop"
 	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/logger"
 	mcpserver "AfdianToMarkdown/mcp"
@@ -60,6 +61,7 @@ func main() {
 		UsageText: "eg:\n\tAfdianToMarkdown.exe motions -au Alice \n" +
 			"eg:\n\tAfdianToMarkdown.exe album -u https://afdian.com/album/aaa\n" +
 			"eg:\n\tAfdianToMarkdown.exe albums -au Alice \n" +
+			"eg:\n\tAfdianToMarkdown.exe shop -au Alice \n" +
 			"eg:\n\tAfdianToMarkdown.exe update",
 		Version:         fmt.Sprintf("version: %s, commit: %s, build date: %s", version, commit, date),
 		HideHelpCommand: true,
@@ -153,10 +155,22 @@ func main() {
 				},
 			},
 			{
+				Name:  "shop",
+				Usage: "下载指定作者电铺的商品",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Destination: &authorUrlSlug, Value: "", Usage: "待下载的作者id"},
+					&cli.StringFlag{Name: "tag", Value: "", Usage: "店铺标签 (new, time_limit_price, vip_price)"},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return shop.GetShopProducts(cfg, authorUrlSlug, cookieString, cmd.String("tag"), false)
+				},
+			},
+			{
 				Name:  "update",
-				Usage: "更新所有已经下载的作者的动态和作品集",
+				Usage: "更新所有已经下载的作者的动态、作品集和电铺商品",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{Name: "quick", Destination: &quickUpdate, Value: false, Usage: "快速更新：遇到已存在的文件时跳过剩余分页"},
+					&cli.StringFlag{Name: "tag", Value: "", Usage: "店铺标签 (new, time_limit_price, vip_price)"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					authors, err := utils.CheckAndListAuthors(cfg.DataDir)
@@ -165,7 +179,7 @@ func main() {
 					}
 					for _, author := range authors {
 						slog.Info("Find exist author: ", "authorName", author)
-						hasMotions, hasAlbums := utils.CheckAuthorContent(cfg.DataDir, author)
+						hasMotions, hasAlbums, hasShop := utils.CheckAuthorContent(cfg.DataDir, author)
 						if hasMotions {
 							if err := motion.GetMotions(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
 								return err
@@ -173,6 +187,11 @@ func main() {
 						}
 						if hasAlbums {
 							if err := album.GetAlbums(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
+								return err
+							}
+						}
+						if hasShop {
+							if err := shop.GetShopProducts(cfg, author, cookieString, cmd.String("tag"), quickUpdate); err != nil {
 								return err
 							}
 						}
