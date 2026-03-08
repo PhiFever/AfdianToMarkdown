@@ -223,8 +223,9 @@ func GetProductList(cfg *config.Config, userName string, cookieString string, ta
 
 	var allProducts []Product
 	page := 1
+	maxPage := 100 // 设置最大页数，防止无限循环
 
-	for {
+	for page <= maxPage {
 		apiUrl := fmt.Sprintf("%s/api/creator/get-products?user_id=%s&page=%d&tag_id=%s", cfg.HostUrl, userId, page, tagId)
 		body, err := NewRequestGet(cfg.Host, apiUrl, cookieString, userReferer)
 		if err != nil {
@@ -253,6 +254,11 @@ func GetProductList(cfg *config.Config, userName string, cookieString string, ta
 		}
 
 		page++
+		time.Sleep(time.Millisecond * time.Duration(DelayMs))
+	}
+
+	if page > maxPage {
+		slog.Warn("GetProductList reached maxPage limit", "maxPage", maxPage, "userName", userName)
 	}
 
 	return allProducts, nil
