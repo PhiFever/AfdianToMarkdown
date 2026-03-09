@@ -2,7 +2,7 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/PhiFever/AfdianToMarkdown/total)
 ## AfdianToMarkdown
 
-爱发电(afdian.com)爬虫，用于下载爱发电作者的动态和作品集并保存为markdown文件。
+爱发电(afdian.com)爬虫，用于下载爱发电作者的动态、作品集和电铺商品并保存为markdown文件
 
 **！！！该软件不能直接帮你免费爬取订阅后才能查看的内容！！！**
 
@@ -71,9 +71,33 @@ $ .\AfdianToMarkdown.exe -h
 .\AfdianToMarkdown.exe albums -au "user_id" 
 ```
 
-#### 更新所有已经下载的作者的动态和作品集
-1. 需要对应的作者目录下至少下载过`motions`或者`albums`中的一组，会完全比对已下载的组中所有的post并下载缺失的post。对于已经下载的部分，如果标题或内容发生了变化则不会更新
-2. 不会覆盖已经下载的文件，所以也不会更新评论。可以通过删除文件来强制更新
+#### 下载作者电铺的所有商品
+
+下载作者电铺中的商品信息。支持通过标签（Tag）进行筛选
+
+| 标签 (Tag) | 说明 |
+|------------|------|
+| (不写) | 默认排序 (全部商品) |
+| `new` | 最新商品|
+| `vip_price` | 会员价 (作者不一定有) |
+| `time_limit_price` | 限时特价 (作者不一定有) |
+| `(UUID)` | 作者自定义分类的 ID (随机生成的 UUID) |
+
+```shell
+# 下载所有商品
+.\AfdianToMarkdown.exe shop -au "user_id" 
+
+# 按标签筛选下载 (可选值如上)
+.\AfdianToMarkdown.exe shop -au "user_id" --tag "new"
+
+# 按自定义分类下载 (需从浏览器控制台获取对应的 tag_id)
+.\AfdianToMarkdown.exe shop -au "user_id" --tag "UUID"
+```
+
+#### 更新所有已经下载的作者的动态、作品集和电铺
+1. 需要对应的作者目录下至少下载过`motions`、`albums`或者`shop`中的一组，会完全比对已下载的组中所有的post并下载缺失的post。对于已经下载的部分，如果标题或内容发生了变化则不会更新
+2. 电铺商品会根据标签进行分类存储：默认商品存放在 `shop/default/` 目录下；如果指定了标签，则存放在 `shop/{tag_id}/` 目录下。
+3. 不会覆盖已经下载的文件，所以也不会更新评论。可以通过删除文件来强制更新
 
 ```shell
 .\AfdianToMarkdown.exe --host="ifdian.net" update
@@ -85,6 +109,14 @@ $ .\AfdianToMarkdown.exe -h
 
 ```shell
 .\AfdianToMarkdown.exe update --quick
+```
+
+**指定电铺更新标签**
+
+更新电铺商品时，默认更新全量商品列表。你也可以指定特定标签进行批量更新：
+
+```shell
+.\AfdianToMarkdown.exe update --tag "new"
 ```
 
 #### 下载任意作者的单个作品集
@@ -198,6 +230,13 @@ cron 更新任务示例（每天凌晨 3 点更新，然后重启服务）：
 ```
 
 ### 更新日志
+
+#### v1.2.0
+
+1. **新增电铺（Shop）下载支持**：支持按作者抓取电铺中的商品信息，并保存为 Markdown
+2. **支持商品标签筛选**：可以通过 `--tag` 参数筛选“最新”、“限时特价”、“会员价”或指定分类
+3. **电铺图片备份**：自动下载商品的封面图片并保存到本地
+4. **update 命令增强**：批量更新现在也涵盖了电铺商品
 
 #### v1.1.0
 

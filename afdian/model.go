@@ -16,6 +16,18 @@ type Post struct {
 	PublishTime time.Time
 }
 
+// Product 商品信息
+type Product struct {
+	ID          string
+	TagID       string
+	Name        string
+	Url         string
+	Pic         string
+	Desc        string
+	Price       string
+	UpdateTime  time.Time
+}
+
 // Cookie 从 Chrome 中使用cookie master导出的 Cookies
 type Cookie struct {
 	Domain     string  `json:"domain"`

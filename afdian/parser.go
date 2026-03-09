@@ -211,3 +211,58 @@ func getCommentString(commentJson gjson.Result) (commentString string) {
 	})
 	return commentString
 }
+
+// GetProductList 获取作者电铺的商品列表
+func GetProductList(cfg *config.Config, userName string, cookieString string, tagId string) ([]Product, error) {
+	// https://afdian.com/api/creator/get-products?user_id={user_id}&page={page}&tag_id={tag_id}
+	userReferer := fmt.Sprintf("%s/a/%s?tab=shop", cfg.HostUrl, userName)
+	userId, err := GetAuthorId(cfg, userName, userReferer, cookieString)
+	if err != nil {
+		return nil, err
+	}
+
+	var allProducts []Product
+	page := 1
+
+	for {
+		apiUrl := fmt.Sprintf("%s/api/creator/get-products?user_id=%s&page=%d&tag_id=%s", cfg.HostUrl, userId, page, tagId)
+		body, err := NewRequestGet(cfg.Host, apiUrl, cookieString, userReferer)
+		if err != nil {
+			return nil, err
+		}
+
+		respData := gjson.GetBytes(body, "data")
+		list := respData.Get("list").Array()
+		hasMore := respData.Get("has_more").Int()
+		slog.Debug("GetProductList", "page", page, "has_more", hasMore, "count", len(list))
+
+		if len(list) == 0 {
+			break
+		}
+
+		for _, item := range list {
+			planId := item.Get("plan_id").String()
+			updateTime := time.Unix(item.Get("update_time").Int(), 0)
+
+			allProducts = append(allProducts, Product{
+				ID:         planId,
+				TagID:      tagId,
+				Name:       utils.ToSafeFilename(item.Get("name").String()),
+				Url:        fmt.Sprintf("%s/item/%s", cfg.HostUrl, planId),
+				Pic:        item.Get("pic").String(),
+				Desc:       item.Get("desc").String(),
+				Price:      item.Get("price").String(),
+				UpdateTime: updateTime,
+			})
+		}
+
+		if respData.Get("has_more").Int() == 0 {
+			break
+		}
+
+		page++
+		time.Sleep(time.Millisecond * time.Duration(DelayMs))
+	}
+
+	return allProducts, nil
+}
