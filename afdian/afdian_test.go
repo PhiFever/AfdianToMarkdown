@@ -175,6 +175,46 @@ func TestGetAlbumPostPage(t *testing.T) {
 	}
 }
 
+func TestGetProductList(t *testing.T) {
+	tests := []struct {
+		name     string
+		userName string
+		tagId    string
+		minCount int
+	}{
+		{
+			name:     "nijisanji_all",
+			userName: "nijisanji",
+			tagId:    "",
+			minCount: 100, // nijisanji 有大量商品，用于验证多页翻页逻辑 (has_more)
+		},
+		{
+			name:     "nijisanji_new_tag",
+			userName: "nijisanji",
+			tagId:    "new",
+			minCount: 1, // 验证 tag 过滤功能
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			products, err := GetProductList(cfg, tt.userName, cookieString, tt.tagId)
+			assert.NoError(t, err)
+			assert.GreaterOrEqual(t, len(products), tt.minCount, "抓取的商品总数应大于或等于 %d", tt.minCount)
+
+			for _, p := range products {
+				// 验证 TagID 是否透传正确
+				assert.Equal(t, tt.tagId, p.TagID, "商品 TagID 应与请求参数一致")
+
+				// 验证基本字段不为空
+				assert.NotEmpty(t, p.ID)
+				assert.NotEmpty(t, p.Name)
+				assert.NotEmpty(t, p.Url)
+				assert.NotZero(t, p.UpdateTime)
+			}
+		})
+	}
+}
+
 func Test_getCommentString(t *testing.T) {
 	t.Run("单条评论", func(t *testing.T) {
 		json := `[{"user":{"name":"张三"},"publish_time":"1700000000","content":"好文章"}]`

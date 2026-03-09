@@ -77,14 +77,15 @@ func ToSafeFilename(in string) string {
 	return rt
 }
 
-// CheckAuthorContent 检查作者目录下是否存在 motions 文件夹和作品集文件夹
+// CheckAuthorContent 检查作者目录下是否存在 motions 文件夹、shop 文件夹和作品集文件夹
 // hasMotions: 存在 motions 子目录
-// hasAlbums: 存在除 motions 以外的子目录
-func CheckAuthorContent(dataDir, author string) (hasMotions, hasAlbums bool) {
+// hasShop: 存在 shop 子目录
+// hasAlbums: 存在除 motions 和 shop 以外的子目录
+func CheckAuthorContent(dataDir, author string) (hasMotions, hasAlbums, hasShop bool) {
 	authorDir := filepath.Join(dataDir, author)
 	files, err := os.ReadDir(authorDir)
 	if err != nil {
-		return false, false
+		return false, false, false
 	}
 	for _, file := range files {
 		if !file.IsDir() {
@@ -92,6 +93,8 @@ func CheckAuthorContent(dataDir, author string) (hasMotions, hasAlbums bool) {
 		}
 		if file.Name() == "motions" {
 			hasMotions = true
+		} else if file.Name() == "shop" {
+			hasShop = true
 		} else {
 			hasAlbums = true
 		}
