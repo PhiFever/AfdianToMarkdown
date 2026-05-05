@@ -32,15 +32,12 @@ func SavePostIfNotExist(cfg *config.Config, filePath string, article afdian.Post
 			return false, err
 		}
 
-		audioContent, err := downloadMedia(filePath, article.Name, audio, "audio", cfg.DownloadMedia)
-		if err != nil {
-			return false, err
+		audioContent := renderMedia(cfg, filePath, article.Name, audio, "audio")
+		videoContent := renderMedia(cfg, filePath, article.Name, video, "video")
+		mediaContent := ""
+		if audioContent != "" || videoContent != "" {
+			mediaContent = "### 媒体\n\n" + audioContent + videoContent
 		}
-		videoContent, err := downloadMedia(filePath, article.Name, video, "video", cfg.DownloadMedia)
-		if err != nil {
-			return false, err
-		}
-		mediaContent := audioContent + videoContent
 
 		referUrl := strings.Replace(article.Url, "post", "p", 1)
 		articleContent := fmt.Sprintf("## %s\n\n### Refer\n\n%s\n\n### 正文\n\n%s\n\n%s\n\n%s",
@@ -105,10 +102,26 @@ func getPictures(filePath string, article afdian.Post) (string, error) {
 	return picContent, nil
 }
 
-func downloadMedia(filePath string, articleName string, mediaUrl string, label string, downloadMedia bool) (string, error) {
-	if mediaUrl == "" || !downloadMedia {
-		return "", nil
+// renderMedia 生成媒体标签：cfg.DownloadMedia 启用时尝试下载到本地，未启用或下载失败时回退到远程 URL
+func renderMedia(cfg *config.Config, filePath, articleName, mediaUrl, label string) string {
+	if mediaUrl == "" {
+		return ""
 	}
+
+	src := mediaUrl
+	if cfg.DownloadMedia {
+		if local, err := downloadMediaFile(filePath, articleName, mediaUrl, label); err != nil {
+			slog.Error("Failed to download media", "label", label, "url", mediaUrl, "error", err)
+		} else {
+			src = local
+		}
+		afdian.MediaDownloadDelay()
+	}
+
+	return fmt.Sprintf("<%s controls src=\"%s\"></%s>\n\n", label, src, label)
+}
+
+func downloadMediaFile(filePath, articleName, mediaUrl, label string) (string, error) {
 	assetsDir := filepath.Join(filepath.Dir(filePath), utils.ImgDir)
 	if err := os.MkdirAll(assetsDir, os.ModePerm); err != nil {
 		return "", fmt.Errorf("create assets directory error: %v", err)
@@ -116,25 +129,23 @@ func downloadMedia(filePath string, articleName string, mediaUrl string, label s
 
 	ext := filepath.Ext(strings.SplitN(mediaUrl, "?", 2)[0])
 	if ext == "" {
-		ext = ".mp4"
+		if label == "audio" {
+			ext = ".mp3"
+		} else {
+			ext = ".mp4"
+		}
 	}
 	localFileName := fmt.Sprintf("%s_%s%s", utils.ToSafeFilename(articleName), label, ext)
 	localFilePath := filepath.Join(assetsDir, localFileName)
 
 	slog.Info("Downloading media", "label", label, "article", articleName, "url", mediaUrl)
-	err := requests.
+	if err := requests.
 		URL(mediaUrl).
 		Header("user-agent", afdian.ChromeUserAgent).
 		ToFile(localFilePath).
-		Fetch(context.Background())
-
-	if err != nil {
-		slog.Error("Failed to download media", "label", label, "url", mediaUrl, "error", err)
-		afdian.MediaDownloadThrottle()
-		return fmt.Sprintf("<%s controls src=\"%s\"></%s>\n\n", label, mediaUrl, label), nil
+		Fetch(context.Background()); err != nil {
+		return "", err
 	}
 
-	afdian.MediaDownloadThrottle()
-	relPath := path.Join(utils.ImgDir, localFileName)
-	return fmt.Sprintf("<%s controls src=\"%s\"></%s>\n\n", label, relPath, label), nil
+	return path.Join(utils.ImgDir, localFileName), nil
 }

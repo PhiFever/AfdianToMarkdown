@@ -20,8 +20,8 @@ const (
 	ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36`
 )
 
-// MediaDownloadThrottle 媒体下载间的随机等待（5~15s + 抖动），避免触发限流
-func MediaDownloadThrottle() {
+// MediaDownloadDelay 媒体下载间的随机等待（5~15s + 抖动），避免触发限流
+func MediaDownloadDelay() {
 	baseMs := 5000 + rand.IntN(10001)
 	jitterMs := 500 + rand.IntN(1001)
 	if rand.IntN(2) == 0 {
@@ -90,7 +90,7 @@ func buildAfdianHeaders(host string, cookieString string, referer string) http.H
 		"locale-lang":        {"zh-CN"},
 		"pragma":             {"no-cache"},
 		"referer":            {referer},
-		"sec-ch-ua":          {`"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"`},
+		"sec-ch-ua":          {`"Google Chrome";v="147", "Chromium";v="147", "Not_A Brand";v="24"`},
 		"sec-ch-ua-mobile":   {"?0"},
 		"sec-ch-ua-platform": {`"Windows"`},
 		"sec-fetch-dest":     {"empty"},
