@@ -26,3 +26,4 @@ cookies.json
 .specify
 *.zip
 *.json
+*.log

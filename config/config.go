@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"golang.org/x/exp/slog"
+)
 
 // Config 统一配置结构体，消除全局可变状态
 type Config struct {
@@ -20,4 +24,16 @@ func NewConfig(host string, dataDir string, cookiePath string) *Config {
 		DataDir:    dataDir,
 		CookiePath: cookiePath,
 	}
+}
+
+// HandleErr 统一处理可跳过的错误：开启 SkipFailed 时记录日志并返回 nil，否则原样返回错误
+func (c *Config) HandleErr(err error, msg string, kv ...any) error {
+	if err == nil {
+		return nil
+	}
+	if c.SkipFailed {
+		slog.Error(msg, append(kv, "err", err)...)
+		return nil
+	}
+	return err
 }

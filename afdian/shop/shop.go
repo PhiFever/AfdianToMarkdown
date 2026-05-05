@@ -99,8 +99,9 @@ func GetShopProducts(cfg *config.Config, authorUrlSlug string, cookieString stri
 		content := fmt.Sprintf("## %s\n\n**价格**: %s\n\n**标签**: %s\n\n**链接**: %s\n\n**更新时间**: %s\n\n---\n\n%s%s",
 			product.Name, product.Price, tagDisplay, product.Url, product.UpdateTime.Format("2006-01-02 15:04:05"), picContent, markdownDesc)
 
-		if err := os.WriteFile(filePath, []byte(content), os.ModePerm); err != nil {
-			slog.Error("保存商品文件失败", "err", err, "path", filePath)
+		err = os.WriteFile(filePath, []byte(content), os.ModePerm)
+		if err := cfg.HandleErr(err, "保存商品文件失败", "path", filePath, "product", product.Name); err != nil {
+			return err
 		}
 
 		time.Sleep(time.Millisecond * time.Duration(afdian.DelayMs))

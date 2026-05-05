@@ -30,10 +30,9 @@ func GetAlbums(cfg *config.Config, authorUrlSlug string, cookieString string, au
 	for _, album := range albumList {
 		slog.Info("Find album: ", "albumName", album.AlbumName)
 		err := GetAlbum(cfg, cookieString, authToken, album, disableComment, quickUpdate, converter)
-		if err != nil {
+		if err := cfg.HandleErr(err, "下载作品集失败", "album", album.AlbumName, "url", album.AlbumUrl); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
@@ -68,11 +67,7 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 			filePath := filepath.Join(albumSaveDir, timePrefix+"_"+post.Name+".md")
 
 			skipped, err := storage.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter)
-			if err != nil {
-				if cfg.SkipFailed {
-					slog.Error("下载失败，跳过", "title", post.Name, "url", post.Url, "err", err)
-					continue
-				}
+			if err := cfg.HandleErr(err, "下载作品集文章失败", "title", post.Name, "url", post.Url); err != nil {
 				return err
 			}
 			if quickUpdate && skipped {
