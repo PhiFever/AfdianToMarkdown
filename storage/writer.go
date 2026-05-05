@@ -6,10 +6,13 @@ import (
 	"AfdianToMarkdown/utils"
 	"context"
 	"fmt"
+	"log"
+	"math/rand/v2"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/carlmjohnson/requests"
@@ -22,7 +25,7 @@ func SavePostIfNotExist(cfg *config.Config, filePath string, article afdian.Post
 	fileExists := err == nil || os.IsExist(err)
 	if !fileExists {
 		slog.Info("Saving file:", "path", filePath)
-		content, err := afdian.GetPostContent(cfg, article.Url, authToken, converter)
+		content, audio, video, err := afdian.GetPostContent(cfg, article.Url, authToken, converter)
 		if err != nil {
 			return false, err
 		}
@@ -32,9 +35,19 @@ func SavePostIfNotExist(cfg *config.Config, filePath string, article afdian.Post
 			return false, err
 		}
 
+		audioContent, err := downloadMedia(filePath, article.Name, audio, "audio", cfg.DownloadMedia)
+		if err != nil {
+			return false, err
+		}
+		videoContent, err := downloadMedia(filePath, article.Name, video, "video", cfg.DownloadMedia)
+		if err != nil {
+			return false, err
+		}
+		mediaContent := audioContent + videoContent
+
 		referUrl := strings.Replace(article.Url, "post", "p", 1)
-		articleContent := fmt.Sprintf("## %s\n\n### Refer\n\n%s\n\n### 正文\n\n%s\n\n%s",
-			article.Name, referUrl, content, picContent)
+		articleContent := fmt.Sprintf("## %s\n\n### Refer\n\n%s\n\n### 正文\n\n%s\n\n%s\n\n%s",
+			article.Name, referUrl, content, picContent, mediaContent)
 
 		if !disableComment {
 			commentString, hotCommentString, err := afdian.GetPostComment(cfg, article.Url, authToken)
@@ -66,7 +79,7 @@ func getPictures(filePath string, article afdian.Post) (string, error) {
 	// 下载并保存图片到本地
 	for i, pictureUrl := range article.Pictures {
 		// 生成本地图片文件名
-		ext := filepath.Ext(pictureUrl)
+		ext := filepath.Ext(strings.SplitN(pictureUrl, "?", 2)[0])
 		if ext == "" {
 			ext = ".jpg" // 默认扩展名
 		}
@@ -93,4 +106,49 @@ func getPictures(filePath string, article afdian.Post) (string, error) {
 		picContent += fmt.Sprintf("![image](%s)\n", relPath)
 	}
 	return picContent, nil
+}
+
+func downloadMedia(filePath string, articleName string, mediaUrl string, label string, downloadMedia bool) (string, error) {
+	if mediaUrl == "" || !downloadMedia {
+		return "", nil
+	}
+	assetsDir := filepath.Join(filepath.Dir(filePath), utils.ImgDir)
+	if err := os.MkdirAll(assetsDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("create assets directory error: %v", err)
+	}
+
+	ext := filepath.Ext(strings.SplitN(mediaUrl, "?", 2)[0])
+	if ext == "" {
+		ext = ".mp4"
+	}
+	localFileName := fmt.Sprintf("%s_%s%s", utils.ToSafeFilename(articleName), label, ext)
+	localFilePath := filepath.Join(assetsDir, localFileName)
+
+	log.Printf("Downloading %s in article %s: %s", label, articleName, mediaUrl)
+	err := requests.
+		URL(mediaUrl).
+		Header("user-agent", afdian.ChromeUserAgent).
+		ToFile(localFilePath).
+		Fetch(context.Background())
+
+	if err != nil {
+		log.Printf("Failed to download %s %s: %v", label, mediaUrl, err)
+		delayDownload()
+		return fmt.Sprintf("<%s controls src=\"%s\"></%s>\n\n", label, mediaUrl, label), nil
+	}
+
+	delayDownload()
+	relPath := filepath.Join(utils.ImgDir, localFileName)
+	return fmt.Sprintf("<%s controls src=\"%s\"></%s>\n\n", label, relPath, label), nil
+}
+
+func delayDownload() {
+	baseMs := 5000 + rand.IntN(10001)
+	jitterMs := 500 + rand.IntN(1001)
+	if rand.IntN(2) == 0 {
+		jitterMs = -jitterMs
+	}
+	delay := time.Duration(baseMs+jitterMs) * time.Millisecond
+	log.Printf("Waiting %v before next download...", delay)
+	time.Sleep(delay)
 }

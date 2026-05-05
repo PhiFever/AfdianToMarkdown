@@ -28,6 +28,8 @@ var (
 	albumUrl                string
 	cookieString, authToken string
 	disableComment          bool
+	downloadMediaFlag       bool
+	skipFailedFlag          bool
 	quickUpdate             bool
 	debugMode               bool
 
@@ -70,6 +72,8 @@ func main() {
 			&cli.StringFlag{Name: "dir", Destination: &dataDirFlag, Value: "", Usage: "数据存储目录，默认为程序所在目录下的 data 文件夹"},
 			&cli.StringFlag{Name: "cookie", Destination: &cookiePathFlag, Value: "", Usage: "cookies.json 文件路径，默认为程序所在目录下的 cookies.json"},
 			&cli.BoolFlag{Name: "disable_comment", Destination: &disableComment, Value: false, Usage: "为true时不下载评论"},
+			&cli.BoolFlag{Name: "download_media", Destination: &downloadMediaFlag, Value: false, Usage: "下载音频和视频文件，默认不下载"},
+			&cli.BoolFlag{Name: "skip_failed", Destination: &skipFailedFlag, Value: false, Usage: "下载失败时跳过继续爬取，默认终止程序"},
 			&cli.BoolFlag{Name: "debug", Destination: &debugMode, Value: false, Usage: "启用调试日志"},
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
@@ -98,6 +102,8 @@ func main() {
 			}
 
 			cfg = config.NewConfig(afdianHost, dataDir, cookiePath)
+			cfg.DownloadMedia = downloadMediaFlag
+			cfg.SkipFailed = skipFailedFlag
 
 			// mcp 子命令不需要加载 Cookie
 			if isMcpSubcommand() {
@@ -182,17 +188,29 @@ func main() {
 						hasMotions, hasAlbums, hasShop := utils.CheckAuthorContent(cfg.DataDir, author)
 						if hasMotions {
 							if err := motion.GetMotions(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
-								return err
+								if cfg.SkipFailed {
+									slog.Error("更新动态失败，跳过", "author", author, "err", err)
+								} else {
+									return err
+								}
 							}
 						}
 						if hasAlbums {
 							if err := album.GetAlbums(cfg, author, cookieString, authToken, disableComment, quickUpdate); err != nil {
-								return err
+								if cfg.SkipFailed {
+									slog.Error("更新作品集失败，跳过", "author", author, "err", err)
+								} else {
+									return err
+								}
 							}
 						}
 						if hasShop {
 							if err := shop.GetShopProducts(cfg, author, cookieString, cmd.String("tag"), quickUpdate); err != nil {
-								return err
+								if cfg.SkipFailed {
+									slog.Error("更新电铺失败，跳过", "author", author, "err", err)
+								} else {
+									return err
+								}
 							}
 						}
 					}

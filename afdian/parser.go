@@ -140,8 +140,8 @@ func GetAlbumPostPage(cfg *config.Config, albumId string, cookieString string, l
 	return postList, nil
 }
 
-// GetPostContent 获取文章正文内容
-func GetPostContent(cfg *config.Config, articleUrl string, authToken string, converter *md.Converter) (string, error) {
+// GetPostContent 获取文章正文内容、音频和视频地址
+func GetPostContent(cfg *config.Config, articleUrl string, authToken string, converter *md.Converter) (content string, audio string, video string, err error) {
 	//在album内的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id={album_id}
 	//在album外的： https://afdian.com/api/post/get-detail?post_id={post_id}&album_id=
 	slog.Info("articleUrl:", "url", articleUrl)
@@ -155,16 +155,26 @@ func GetPostContent(cfg *config.Config, articleUrl string, authToken string, con
 	slog.Debug("Get article content apiUrl:", "url", apiUrl)
 	body, err := NewRequestGet(cfg.Host, apiUrl, authToken, articleUrl)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	articleContent := gjson.GetBytes(body, "data.post.content").String()
+	slog.Debug("raw html content:", "html", articleContent)
+
+	audio = gjson.GetBytes(body, "data.post.audio").String()
+	video = gjson.GetBytes(body, "data.post.video").String()
+	if audio != "" {
+		slog.Debug("found audio:", "url", audio)
+	}
+	if video != "" {
+		slog.Debug("found video:", "url", video)
+	}
 
 	markdown, err := converter.ConvertString(articleContent)
 	if err != nil {
-		return "", fmt.Errorf("error converting HTML to Markdown: %w", err)
+		return "", "", "", fmt.Errorf("error converting HTML to Markdown: %w", err)
 	}
 
-	return markdown, nil
+	return markdown, audio, video, nil
 }
 
 // GetPostComment 获取文章评论

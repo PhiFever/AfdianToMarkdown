@@ -125,6 +125,22 @@ $ .\AfdianToMarkdown.exe -h
 .\AfdianToMarkdown.exe album -u https://afdian.com/album/aaa
 ```
 
+#### 下载视频与音频
+
+在使用motions、albums和album时,使用download_media参数启用下载音视频功能
+
+```shell
+.\AfdianToMarkdown.exe album -u https://afdian.com/album/aaa --download_media
+```
+
+可以使用skip_failed参数来指定下载失败时的行为,使用该参数后,下载失败时会跳过当前下载继续后面内容的下载.
+
+默认情况下下载失败会终止程序执行.
+
+```shell
+.\AfdianToMarkdown.exe album -u https://afdian.com/album/aaa --download_media --skip_failed
+```
+
 ### MCP Server 模式
 
 本程序支持作为 [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) 服务器运行，让 AI 助手（如 Claude Desktop）直接检索已下载的文档。

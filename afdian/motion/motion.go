@@ -42,6 +42,10 @@ func GetMotions(cfg *config.Config, authorUrlSlug string, cookieString string, a
 			filePath := filepath.Join(cfg.DataDir, authorUrlSlug, authorDir, timePrefix+"_"+article.Name+".md")
 			skipped, err := storage.SavePostIfNotExist(cfg, filePath, article, authToken, disableComment, converter)
 			if err != nil {
+				if cfg.SkipFailed {
+					slog.Error("下载失败，跳过", "title", article.Name, "url", article.Url, "err", err)
+					continue
+				}
 				return err
 			}
 			if quickUpdate && skipped {

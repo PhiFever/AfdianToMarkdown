@@ -69,6 +69,10 @@ func GetAlbum(cfg *config.Config, cookieString string, authToken string, album a
 
 			skipped, err := storage.SavePostIfNotExist(cfg, filePath, post, authToken, disableComment, converter)
 			if err != nil {
+				if cfg.SkipFailed {
+					slog.Error("下载失败，跳过", "title", post.Name, "url", post.Url, "err", err)
+					continue
+				}
 				return err
 			}
 			if quickUpdate && skipped {

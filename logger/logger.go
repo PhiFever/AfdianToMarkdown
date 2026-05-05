@@ -3,10 +3,13 @@ package logger
 import (
 	"context"
 	"fmt"
-	"golang.org/x/exp/slog"
+	"io"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"golang.org/x/exp/slog"
 )
 
 // ANSI 颜色代码
@@ -155,8 +158,139 @@ func (h *ColoredHandler) formatAttr(attr slog.Attr) string {
 	return Purple + attr.Key + Reset + "=" + Blue + fmt.Sprintf("%v", attr.Value) + Reset
 }
 
-// SetupLogger 创建配置好的 logger
+// MultiHandler 将日志同时输出到多个 Handler
+type MultiHandler struct {
+	handlers []slog.Handler
+}
+
+func NewMultiHandler(handlers ...slog.Handler) *MultiHandler {
+	return &MultiHandler{handlers: handlers}
+}
+
+func (h *MultiHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *MultiHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, r.Level) {
+			if err := handler.Handle(ctx, r); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (h *MultiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	newHandlers := make([]slog.Handler, len(h.handlers))
+	for i, handler := range h.handlers {
+		newHandlers[i] = handler.WithAttrs(attrs)
+	}
+	return &MultiHandler{handlers: newHandlers}
+}
+
+func (h *MultiHandler) WithGroup(name string) slog.Handler {
+	newHandlers := make([]slog.Handler, len(h.handlers))
+	for i, handler := range h.handlers {
+		newHandlers[i] = handler.WithGroup(name)
+	}
+	return &MultiHandler{handlers: newHandlers}
+}
+
+// FileHandler 将日志写入文件（无 ANSI 颜色）
+type FileHandler struct {
+	level  slog.Level
+	writer io.Writer
+	attrs  []slog.Attr
+}
+
+func NewFileHandler(level slog.Level, writer io.Writer) *FileHandler {
+	return &FileHandler{
+		level:  level,
+		writer: writer,
+		attrs:  make([]slog.Attr, 0),
+	}
+}
+
+func (h *FileHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.level
+}
+
+func (h *FileHandler) Handle(_ context.Context, r slog.Record) error {
+	timeStr := r.Time.Format("2006-01-02 15:04:05.000")
+	levelStr := r.Level.String()
+
+	file, line := h.getCallerInfo()
+
+	var builder strings.Builder
+	builder.WriteString(timeStr)
+	builder.WriteString(" | ")
+	builder.WriteString(levelStr)
+	builder.WriteString(" | ")
+	builder.WriteString(file + ":" + fmt.Sprintf("%d", line))
+	builder.WriteString(" | ")
+	builder.WriteString(r.Message)
+
+	if r.NumAttrs() > 0 || len(h.attrs) > 0 {
+		builder.WriteString(" |")
+		for _, attr := range h.attrs {
+			builder.WriteString(" ")
+			builder.WriteString(attr.Key)
+			builder.WriteString("=")
+			builder.WriteString(fmt.Sprintf("%v", attr.Value))
+		}
+		r.Attrs(func(attr slog.Attr) bool {
+			builder.WriteString(" ")
+			builder.WriteString(attr.Key)
+			builder.WriteString("=")
+			builder.WriteString(fmt.Sprintf("%v", attr.Value))
+			return true
+		})
+	}
+
+	builder.WriteString("\n")
+	_, err := fmt.Fprint(h.writer, builder.String())
+	return err
+}
+
+func (h *FileHandler) getCallerInfo() (string, int) {
+	for skip := 5; skip < 12; skip++ {
+		_, file, line, ok := runtime.Caller(skip)
+		if !ok {
+			return "unknown", 0
+		}
+		if !strings.Contains(file, "slog") && !strings.Contains(file, "log") {
+			return filepath.Base(file), line
+		}
+	}
+	return "unknown", 0
+}
+
+func (h *FileHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	newAttrs := make([]slog.Attr, len(h.attrs)+len(attrs))
+	copy(newAttrs, h.attrs)
+	copy(newAttrs[len(h.attrs):], attrs)
+	return &FileHandler{level: h.level, writer: h.writer, attrs: newAttrs}
+}
+
+func (h *FileHandler) WithGroup(name string) slog.Handler {
+	return h
+}
+
+// SetupLogger 创建同时输出到控制台和文件的 logger
 func SetupLogger(level slog.Level) *slog.Logger {
-	handler := NewColoredHandler(level)
-	return slog.New(handler)
+	consoleHandler := NewColoredHandler(level)
+
+	f, err := os.Create("app.log")
+	if err != nil {
+		return slog.New(consoleHandler)
+	}
+	fileHandler := NewFileHandler(level, f)
+	return slog.New(NewMultiHandler(consoleHandler, fileHandler))
 }
