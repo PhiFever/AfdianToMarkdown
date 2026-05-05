@@ -18,3 +18,11 @@ Thumbs.db
 .env*
 data/
 cookies.json
+
+# 归档文件
+/archive
+/static
+.claude
+.specify
+*.zip
+*.json

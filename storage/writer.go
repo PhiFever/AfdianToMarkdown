@@ -6,13 +6,10 @@ import (
 	"AfdianToMarkdown/utils"
 	"context"
 	"fmt"
-	"log"
-	"math/rand/v2"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/carlmjohnson/requests"
@@ -124,7 +121,7 @@ func downloadMedia(filePath string, articleName string, mediaUrl string, label s
 	localFileName := fmt.Sprintf("%s_%s%s", utils.ToSafeFilename(articleName), label, ext)
 	localFilePath := filepath.Join(assetsDir, localFileName)
 
-	log.Printf("Downloading %s in article %s: %s", label, articleName, mediaUrl)
+	slog.Info("Downloading media", "label", label, "article", articleName, "url", mediaUrl)
 	err := requests.
 		URL(mediaUrl).
 		Header("user-agent", afdian.ChromeUserAgent).
@@ -132,23 +129,12 @@ func downloadMedia(filePath string, articleName string, mediaUrl string, label s
 		Fetch(context.Background())
 
 	if err != nil {
-		log.Printf("Failed to download %s %s: %v", label, mediaUrl, err)
-		delayDownload()
+		slog.Error("Failed to download media", "label", label, "url", mediaUrl, "error", err)
+		afdian.MediaDownloadThrottle()
 		return fmt.Sprintf("<%s controls src=\"%s\"></%s>\n\n", label, mediaUrl, label), nil
 	}
 
-	delayDownload()
-	relPath := filepath.Join(utils.ImgDir, localFileName)
+	afdian.MediaDownloadThrottle()
+	relPath := path.Join(utils.ImgDir, localFileName)
 	return fmt.Sprintf("<%s controls src=\"%s\"></%s>\n\n", label, relPath, label), nil
-}
-
-func delayDownload() {
-	baseMs := 5000 + rand.IntN(10001)
-	jitterMs := 500 + rand.IntN(1001)
-	if rand.IntN(2) == 0 {
-		jitterMs = -jitterMs
-	}
-	delay := time.Duration(baseMs+jitterMs) * time.Millisecond
-	log.Printf("Waiting %v before next download...", delay)
-	time.Sleep(delay)
 }

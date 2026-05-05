@@ -6,16 +6,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/carlmjohnson/requests"
+	"golang.org/x/exp/slog"
 )
 
 const (
 	DelayMs         = 150
-	ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36`
+	ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36`
 )
+
+// MediaDownloadThrottle 媒体下载间的随机等待（5~15s + 抖动），避免触发限流
+func MediaDownloadThrottle() {
+	baseMs := 5000 + rand.IntN(10001)
+	jitterMs := 500 + rand.IntN(1001)
+	if rand.IntN(2) == 0 {
+		jitterMs = -jitterMs
+	}
+	delay := time.Duration(baseMs+jitterMs) * time.Millisecond
+	slog.Info("Waiting before next download", "delay", delay)
+	time.Sleep(delay)
+}
 
 // ReadCookiesFromFile 从文件中读取 Cookies
 func ReadCookiesFromFile(filePath string) ([]Cookie, error) {

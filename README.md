@@ -27,6 +27,8 @@
 | `--cookie` | cookies.json 文件路径 | 程序所在目录下的 `cookies.json` |
 | `--disable_comment` | 为 true 时不下载评论 | `false` |
 | `--debug` | 启用调试日志 | `false` |
+| `--download_media` | 下载post中的音视频资源 | `false` |
+| `--skip_failed` | 下载post失败后是否跳过，为false时退出 | `false` |
 
 ### 构建
 
@@ -131,14 +133,6 @@ $ .\AfdianToMarkdown.exe -h
 
 ```shell
 .\AfdianToMarkdown.exe album -u https://afdian.com/album/aaa --download_media
-```
-
-可以使用skip_failed参数来指定下载失败时的行为,使用该参数后,下载失败时会跳过当前下载继续后面内容的下载.
-
-默认情况下下载失败会终止程序执行.
-
-```shell
-.\AfdianToMarkdown.exe album -u https://afdian.com/album/aaa --download_media --skip_failed
 ```
 
 ### MCP Server 模式
@@ -247,10 +241,14 @@ cron 更新任务示例（每天凌晨 3 点更新，然后重启服务）：
 
 ### 更新日志
 
+#### v1.3.0
+
+支持音视频资源下载，使用`--download_media `参数以启用
+
 #### v1.2.0
 
 1. **新增电铺（Shop）下载支持**：支持按作者抓取电铺中的商品信息，并保存为 Markdown
-2. **支持商品标签筛选**：可以通过 `--tag` 参数筛选“最新”、“限时特价”、“会员价”或指定分类
+2. **支持商品标签筛选**：可以通过 `--tag` 参数筛选"最新"、"限时特价"、"会员价"或指定分类
 3. **电铺图片备份**：自动下载商品的封面图片并保存到本地
 4. **update 命令增强**：批量更新现在也涵盖了电铺商品
 
