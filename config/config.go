@@ -10,6 +10,7 @@ type Config struct {
 	CookiePath    string // cookie 文件路径
 	DownloadMedia bool   // 是否下载音频和视频，默认 false
 	SkipFailed    bool   // 下载失败时是否跳过继续，默认 false（终止程序）
+	MediaOnly     bool   // 仅下载媒体（音频/视频），不保存帖子内容
 }
 
 // NewConfig 创建配置，自动根据 host 生成 HostUrl

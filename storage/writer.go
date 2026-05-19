@@ -18,6 +18,24 @@ import (
 
 // SavePostIfNotExist 检查文件是否存在，不存在则下载并保存文章
 func SavePostIfNotExist(cfg *config.Config, filePath string, article afdian.Post, authToken string, disableComment bool, converter *md.Converter) (skipped bool, err error) {
+	if cfg.MediaOnly {
+		// 媒体专用模式：只下载音频/视频，不保存帖子内容
+		_, audio, video, err := afdian.GetPostContent(cfg, article.Url, authToken, converter)
+		if err != nil {
+			return false, err
+		}
+		_, err = downloadMedia(filePath, article.Name, audio, "audio", true)
+		if err != nil {
+			return false, err
+		}
+		_, err = downloadMedia(filePath, article.Name, video, "video", true)
+		if err != nil {
+			return false, err
+		}
+		slog.Info("媒体下载完成（媒体专用模式）", "article", article.Name)
+		return false, nil
+	}
+
 	_, err = os.Stat(filePath)
 	fileExists := err == nil || os.IsExist(err)
 	if !fileExists {

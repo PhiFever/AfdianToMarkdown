@@ -29,6 +29,7 @@ var (
 	cookieString, authToken string
 	disableComment          bool
 	downloadMediaFlag       bool
+	mediaOnlyFlag           bool
 	skipFailedFlag          bool
 	quickUpdate             bool
 	debugMode               bool
@@ -73,6 +74,7 @@ func main() {
 			&cli.StringFlag{Name: "cookie", Destination: &cookiePathFlag, Value: "", Usage: "cookies.json 文件路径，默认为程序所在目录下的 cookies.json"},
 			&cli.BoolFlag{Name: "disable_comment", Destination: &disableComment, Value: false, Usage: "为true时不下载评论"},
 			&cli.BoolFlag{Name: "download_media", Destination: &downloadMediaFlag, Value: false, Usage: "下载音频和视频文件，默认不下载"},
+			&cli.BoolFlag{Name: "media_only", Destination: &mediaOnlyFlag, Value: false, Usage: "仅下载媒体文件（音频/视频），不保存帖子内容"},
 			&cli.BoolFlag{Name: "skip_failed", Destination: &skipFailedFlag, Value: false, Usage: "下载失败时跳过继续爬取，默认终止程序"},
 			&cli.BoolFlag{Name: "debug", Destination: &debugMode, Value: false, Usage: "启用调试日志"},
 		},
@@ -103,6 +105,7 @@ func main() {
 
 			cfg = config.NewConfig(afdianHost, dataDir, cookiePath)
 			cfg.DownloadMedia = downloadMediaFlag
+			cfg.MediaOnly = mediaOnlyFlag
 			cfg.SkipFailed = skipFailedFlag
 
 			// mcp 子命令不需要加载 Cookie
@@ -141,13 +144,15 @@ func main() {
 			},
 			{
 				Name:  "album",
-				Usage: "下载指定的作品集",
+				Usage: "下载指定的作品集，支持按时间范围过滤",
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "url", Aliases: []string{"u"}, Destination: &albumUrl, Value: "", Usage: "待下载的作品集url"},
+					&cli.StringFlag{Name: "from", Value: "", Usage: "开始日期 (YYYY-MM-DD)，只下载此日期之后的文章"},
+					&cli.StringFlag{Name: "to", Value: "", Usage: "结束日期 (YYYY-MM-DD)，只下载此日期之前的文章"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					converter := md.NewConverter("", true, nil)
-					return album.GetAlbum(cfg, cookieString, authToken, afdian.Album{AlbumName: "", AlbumUrl: albumUrl}, disableComment, false, converter)
+					return album.GetAlbum(cfg, cookieString, authToken, afdian.Album{AlbumName: "", AlbumUrl: albumUrl}, disableComment, false, converter, cmd.String("from"), cmd.String("to"))
 				},
 			},
 			{
