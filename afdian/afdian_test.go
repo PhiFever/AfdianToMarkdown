@@ -23,7 +23,7 @@ func init() {
 	//localPath, _ := os.Getwd()
 	//执行测试前，先设置cookie路径为实际本地路径
 	slog.SetDefault(logger.SetupLogger(slog.LevelInfo))
-	cfg = config.NewConfig("afdian.com", `D:\MyProject\Golang\AfdianToMarkdown\data`, `D:\MyProject\Golang\AfdianToMarkdown\cookies.json`)
+	cfg = config.NewConfig("afdian.com", `../data`, `../cookies.json`)
 	slog.Info("cookiePath:", "path", cfg.CookiePath)
 	var err error
 	cookieString, authToken, err = GetCookies(cfg.CookiePath)

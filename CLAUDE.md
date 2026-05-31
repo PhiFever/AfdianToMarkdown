@@ -61,6 +61,7 @@ CLI (main.go) → config.Config 创建
 - HTTP 客户端：`carlmjohnson/requests`，请求头模拟 Chrome 浏览器
 - JSON 解析：`tidwall/gjson`（路径查询而非反序列化到结构体）
 - API 限速：请求间 150ms 延迟（`afdian.DelayMs`）
+- 请求超时与重试：`NewRequestGet` 每次请求带 `RequestTimeout`（默认 30s）超时，失败按指数退避重试 `RetryAttempts`（默认 3）次（`avast/retry-go`）；仅对传输错误、5xx、429 重试，4xx 立即失败。三个参数为包级变量，测试中可覆盖
 - 文件命名：`{index}_{标题}.md`，不安全字符替换为下划线
 - 图片下载到 `.assets/` 子目录，Markdown 中使用相对路径引用
 - `SavePostIfNotExist` 跳过已存在的文件（幂等下载）
@@ -87,7 +88,7 @@ CLI (main.go) → config.Config 创建
 
 ## 注意事项
 
-- 测试直接调用真实 API，需要有效 cookies.json 且测试中硬编码了 Windows 路径
+- 部分测试直接调用真实 API（`afdian_test.go`），需要仓库根存在有效 cookies.json（测试通过 `../cookies.json`、`../data` 相对路径加载）；`client_test.go` 用 httptest 本地验证超时/重试，不依赖网络
 - `ResolveAppDir()` 通过可执行文件路径（排除 go-build 临时目录）或工作目录推断程序目录，数据目录和 cookie 路径可通过 `--dir` 和 `--cookie` 参数独立指定
 - 版本号通过 goreleaser ldflags 注入 `main.version`/`main.commit`/`main.date`
 

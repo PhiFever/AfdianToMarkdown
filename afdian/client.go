@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"time"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/carlmjohnson/requests"
 	"golang.org/x/exp/slog"
 )
@@ -18,6 +20,13 @@ import (
 const (
 	DelayMs         = 150
 	ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36`
+)
+
+// 单次 HTTP 请求的超时与失败重试参数（可在测试中覆盖）
+var (
+	RequestTimeout      = 30 * time.Second
+	RetryAttempts  uint = 3
+	RetryDelay          = 1 * time.Second
 )
 
 // MediaDownloadDelay 媒体下载间的随机等待（5~15s + 抖动），避免触发限流
@@ -101,14 +110,37 @@ func buildAfdianHeaders(host string, cookieString string, referer string) http.H
 	}
 }
 
-// NewRequestGet 发送GET请求
+// NewRequestGet 发送GET请求，带超时控制与失败退避重试
 func NewRequestGet(host string, Url string, cookieString string, referer string) ([]byte, error) {
 	var body bytes.Buffer
-	err := requests.
-		URL(Url).
-		Headers(buildAfdianHeaders(host, cookieString, referer)).
-		ToBytesBuffer(&body).
-		Fetch(context.Background())
+	err := retry.Do(
+		func() error {
+			body.Reset()
+			ctx, cancel := context.WithTimeout(context.Background(), RequestTimeout)
+			defer cancel()
+			return requests.
+				URL(Url).
+				Headers(buildAfdianHeaders(host, cookieString, referer)).
+				ToBytesBuffer(&body).
+				Fetch(ctx)
+		},
+		retry.Attempts(RetryAttempts),
+		retry.Delay(RetryDelay),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.RetryIf(func(err error) bool {
+			// 仅对 5xx 与 429 重试；其余 4xx 客户端错误视为永久失败，立即放弃
+			var re *requests.ResponseError
+			if errors.As(err, &re) {
+				return re.StatusCode >= 500 || re.StatusCode == http.StatusTooManyRequests
+			}
+			// 传输层错误（超时、连接失败等）：重试
+			return true
+		}),
+		retry.OnRetry(func(n uint, err error) {
+			slog.Warn("request failed, retrying", "attempt", n+1, "url", Url, "err", err)
+		}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("GET %s failed: %w", Url, err)
 	}
