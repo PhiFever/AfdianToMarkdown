@@ -12,7 +12,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -45,10 +44,6 @@ func isMcpSubcommand() bool {
 	for _, arg := range os.Args[1:] {
 		if arg == "mcp" {
 			return true
-		}
-		// 跳过 flag 参数
-		if strings.HasPrefix(arg, "-") {
-			continue
 		}
 	}
 	return false
