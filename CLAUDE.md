@@ -93,10 +93,10 @@ CLI (main.go) → config.Config 创建
 - 版本号通过 goreleaser ldflags 注入 `main.version`/`main.commit`/`main.date`
 
 ## Active Technologies
-- Go 1.25 + `urfave/cli/v3`（CLI 框架）、`mark3labs/mcp-go v0.43.2`（MCP SDK） (001-mcp-server-base)
+- Go 1.25 + `urfave/cli/v3`（CLI 框架）、`mark3labs/mcp-go v0.54.1`（MCP SDK） (001-mcp-server-base)
 - 文件系统（Markdown 文件，只读） (001-mcp-server-base)
-- Go 1.25 + mark3labs/mcp-go v0.43.2（`StreamableHTTPServer`）、urfave/cli/v3 (002-mcp-http-transport)
+- Go 1.25 + mark3labs/mcp-go v0.54.1（`StreamableHTTPServer`）、urfave/cli/v3 (002-mcp-http-transport)
 - 文件系统（只读，已有 storage/reader.go） (002-mcp-http-transport)
 
 ## Recent Changes
-- 001-mcp-server-base: Added Go 1.25 + `urfave/cli/v3`（CLI 框架）、`mark3labs/mcp-go v0.43.2`（MCP SDK）
+- 001-mcp-server-base: Added Go 1.25 + `urfave/cli/v3`（CLI 框架）、`mark3labs/mcp-go v0.54.1`（MCP SDK）

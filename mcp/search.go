@@ -2,163 +2,275 @@ package mcp
 
 import (
 	"AfdianToMarkdown/storage"
-	"bufio"
 	"fmt"
-	"os"
-	"path/filepath"
+	"sort"
 	"strings"
+	"unicode"
 )
 
-// Search 在数据目录中全文搜索关键词
-// 支持按作者过滤，返回最多 maxResults 条结果
-func Search(dataDir, query, author string, maxResults int) (*storage.SearchResponse, error) {
-	if query == "" {
-		return nil, fmt.Errorf("请提供搜索关键词")
-	}
+// searchParams 聚合一次搜索的全部参数
+type searchParams struct {
+	query      string
+	matchAll   bool // true=AND，false=OR
+	author     string
+	collection string
+	limit      int
+	offset     int
+	perDocHits int
+}
 
-	// 确定搜索范围（作者列表）
-	var authors []string
-	if author != "" {
-		// 通过 ListPosts 验证作者是否存在（内含路径遍历检查）
-		_, err := storage.ListPosts(dataDir, author)
-		if err != nil {
-			return nil, fmt.Errorf("作者不存在：%s", author)
-		}
-		authors = []string{author}
-	} else {
-		var err error
-		authors, err = storage.ListAuthors(dataDir)
-		if err != nil {
-			return nil, err
-		}
-	}
+// parseQuery 将查询串解析为词项：
+//   - `"..."` 段为短语，精确子串匹配
+//   - 其余按空白/标点切分为词
+//
+// 全部转小写并去重。不做中文分词，无空格的中文串将作为单一词项。
+func parseQuery(query string) []string {
+	var terms []string
+	var sb strings.Builder
+	inQuote := false
 
-	resp := &storage.SearchResponse{
-		Query: query,
-	}
-	queryLower := strings.ToLower(query)
-
-	// 遍历所有作者的文件
-	for _, a := range authors {
-		authorDir := filepath.Join(dataDir, a)
-		err := filepath.Walk(authorDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return nil
-			}
-			// 跳过目录和非 .md 文件，跳过 .assets 目录
-			if info.IsDir() {
-				if info.Name() == ".assets" {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			if !strings.HasSuffix(info.Name(), ".md") {
-				return nil
-			}
-
-			// 计算相对路径
-			relPath, err := filepath.Rel(dataDir, path)
-			if err != nil {
-				return nil
-			}
-			relPath = filepath.ToSlash(relPath)
-
-			// 解析文章标题
-			postInfo := storage.ParsePostInfo(info.Name(), "", "")
-
-			// 逐行搜索
-			searchFileForMatches(path, relPath, postInfo.Title, a, queryLower, maxResults, resp)
-
-			return nil
+	flushPlain := func() {
+		fields := strings.FieldsFunc(sb.String(), func(r rune) bool {
+			return unicode.IsSpace(r) || unicode.IsPunct(r) || unicode.IsSymbol(r)
 		})
+		sb.Reset()
+		for _, f := range fields {
+			terms = append(terms, strings.ToLower(f))
+		}
+	}
+
+	for _, r := range query {
+		if r == '"' {
+			if inQuote {
+				if p := strings.TrimSpace(sb.String()); p != "" {
+					terms = append(terms, strings.ToLower(p))
+				}
+				sb.Reset()
+				inQuote = false
+			} else {
+				flushPlain()
+				inQuote = true
+			}
+			continue
+		}
+		sb.WriteRune(r)
+	}
+	if inQuote {
+		// 未闭合引号：剩余部分作为短语处理
+		if p := strings.TrimSpace(sb.String()); p != "" {
+			terms = append(terms, strings.ToLower(p))
+		}
+	} else {
+		flushPlain()
+	}
+
+	return dedupStrings(terms)
+}
+
+func dedupStrings(in []string) []string {
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+// docMatch 单篇文档的命中聚合
+type docMatch struct {
+	post       storage.Post
+	hitCount   int   // 命中行数
+	coverage   int   // 命中的不同词项数
+	titleMatch bool  // 标题是否命中
+	score      int   // 信息性相关度分值
+	matchLines []int // 命中行号（0-based）
+	lines      []string
+}
+
+// Search 执行全文搜索：按 canonical id 去重、文档级聚合、启发式排序、分页
+func Search(dataDir string, p searchParams) (*searchOut, error) {
+	terms := parseQuery(p.query)
+	if len(terms) == 0 {
+		return nil, fmt.Errorf("请提供有效的搜索关键词")
+	}
+
+	var posts []storage.Post
+	var err error
+	if p.author != "" {
+		posts, err = storage.BuildAuthorIndex(dataDir, p.author)
+	} else {
+		posts, err = storage.BuildIndex(dataDir)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var matches []docMatch
+	totalHits := 0
+	for _, post := range posts {
+		if p.collection != "" && !storage.HasCollection(post, p.collection) {
+			continue
+		}
+		content, err := storage.ReadPost(dataDir, post.CanonicalPath)
 		if err != nil {
 			continue
 		}
+		m, ok := matchDocument(post, content, terms, p.matchAll)
+		if !ok {
+			continue
+		}
+		totalHits += m.hitCount
+		matches = append(matches, m)
 	}
 
-	return resp, nil
+	sort.SliceStable(matches, func(i, j int) bool {
+		a, b := matches[i], matches[j]
+		if a.coverage != b.coverage {
+			return a.coverage > b.coverage
+		}
+		if a.titleMatch != b.titleMatch {
+			return a.titleMatch
+		}
+		if a.hitCount != b.hitCount {
+			return a.hitCount > b.hitCount
+		}
+		if a.post.Date != b.post.Date {
+			return a.post.Date > b.post.Date
+		}
+		return a.post.CanonicalPath < b.post.CanonicalPath
+	})
+
+	totalDocs := len(matches)
+	start, end := paginate(totalDocs, p.offset, p.limit)
+	page := matches[start:end]
+
+	results := make([]searchDocDTO, 0, len(page))
+	for _, m := range page {
+		results = append(results, searchDocDTO{
+			ID:          m.post.ID,
+			Title:       m.post.Title,
+			Author:      m.post.Author,
+			Date:        m.post.Date,
+			Path:        m.post.CanonicalPath,
+			URL:         m.post.URL,
+			Collections: m.post.Collections,
+			Score:       m.score,
+			HitCount:    m.hitCount,
+			Snippets:    buildSnippets(m, p.perDocHits),
+		})
+	}
+
+	return &searchOut{
+		Query:        p.query,
+		Match:        matchMode(p.matchAll),
+		TotalDocs:    totalDocs,
+		TotalHits:    totalHits,
+		ReturnedDocs: len(results),
+		Offset:       start,
+		NextOffset:   nextOffset(start, len(results), totalDocs),
+		Results:      results,
+	}, nil
 }
 
-// searchFileForMatches 在单个文件中搜索匹配行，将结果追加到 resp
-func searchFileForMatches(filePath, relPath, title, author, queryLower string, maxResults int, resp *storage.SearchResponse) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return
-	}
-	defer f.Close()
+// matchDocument 在单篇内容中匹配全部词项，返回聚合命中信息
+func matchDocument(post storage.Post, content string, terms []string, matchAll bool) (docMatch, bool) {
+	lines := strings.Split(content, "\n")
 
-	// 先读取所有行，便于提取上下文
-	var lines []string
-	scanner := bufio.NewScanner(f)
-	// 增大缓冲区以处理超长行
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
+	covered := make(map[string]struct{}, len(terms))
+	var matchLines []int
 	for i, line := range lines {
-		if strings.Contains(strings.ToLower(line), queryLower) {
-			resp.TotalCount++
-			if len(resp.Results) >= maxResults {
-				resp.Truncated = true
-				continue
+		ll := strings.ToLower(line)
+		hit := false
+		for _, t := range terms {
+			if strings.Contains(ll, t) {
+				covered[t] = struct{}{}
+				hit = true
 			}
-
-			// 提取前后各 3 行上下文
-			context := buildContext(lines, i)
-
-			resp.Results = append(resp.Results, storage.SearchResult{
-				FilePath:   relPath,
-				Title:      title,
-				Author:     author,
-				LineNumber: i + 1, // 行号从 1 开始
-				Context:    context,
-			})
+		}
+		if hit {
+			matchLines = append(matchLines, i)
 		}
 	}
+
+	titleLower := strings.ToLower(post.Title)
+	titleMatch := false
+	for _, t := range terms {
+		if strings.Contains(titleLower, t) {
+			covered[t] = struct{}{}
+			titleMatch = true
+		}
+	}
+
+	coverage := len(covered)
+	if coverage == 0 || (matchAll && coverage < len(terms)) {
+		return docMatch{}, false
+	}
+
+	score := coverage*1_000_000 + len(matchLines)
+	if titleMatch {
+		score += 500_000
+	}
+
+	return docMatch{
+		post:       post,
+		hitCount:   len(matchLines),
+		coverage:   coverage,
+		titleMatch: titleMatch,
+		score:      score,
+		matchLines: matchLines,
+		lines:      lines,
+	}, true
 }
 
-// buildContext 构建匹配行及前后各 3 行的上下文文本
+// buildSnippets 取前 perDocHits 条命中行，附带上下文
+func buildSnippets(m docMatch, perDocHits int) []snippetDTO {
+	if perDocHits <= 0 {
+		perDocHits = 3
+	}
+	snippets := make([]snippetDTO, 0, perDocHits)
+	for _, idx := range m.matchLines {
+		if len(snippets) >= perDocHits {
+			break
+		}
+		snippets = append(snippets, snippetDTO{
+			Line: idx + 1,
+			Text: buildContext(m.lines, idx),
+		})
+	}
+	return snippets
+}
+
+// buildContext 构建匹配行及前后各 2 行的上下文文本
 func buildContext(lines []string, matchIndex int) string {
-	start := matchIndex - 3
+	start := matchIndex - 2
 	if start < 0 {
 		start = 0
 	}
-	end := matchIndex + 3
-	if end >= len(lines) {
+	end := matchIndex + 2
+	if end > len(lines)-1 {
 		end = len(lines) - 1
 	}
-
 	var sb strings.Builder
 	for i := start; i <= end; i++ {
-		lineNum := i + 1
+		marker := "  "
 		if i == matchIndex {
-			sb.WriteString(fmt.Sprintf("> %d | %s\n", lineNum, lines[i]))
-		} else {
-			sb.WriteString(fmt.Sprintf("  %d | %s\n", lineNum, lines[i]))
+			marker = "> "
 		}
+		fmt.Fprintf(&sb, "%s%d | %s\n", marker, i+1, lines[i])
 	}
 	return strings.TrimRight(sb.String(), "\n")
 }
 
-// formatSearchResponse 将搜索结果格式化为合约定义的文本输出
-func formatSearchResponse(resp *storage.SearchResponse) string {
-	if resp.TotalCount == 0 {
-		return fmt.Sprintf("未找到包含 '%s' 的内容。", resp.Query)
+func matchMode(all bool) string {
+	if all {
+		return "all"
 	}
-
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("搜索 \"%s\" 的结果（显示 %d/%d 条）：\n",
-		resp.Query, len(resp.Results), resp.TotalCount))
-
-	for _, r := range resp.Results {
-		sb.WriteString(fmt.Sprintf("\n---\n📄 %s（第 %d 行）\n\n%s\n",
-			r.FilePath, r.LineNumber, r.Context))
-	}
-
-	if resp.Truncated {
-		sb.WriteString(fmt.Sprintf("\n还有 %d 条结果未显示。\n", resp.TotalCount-len(resp.Results)))
-	}
-
-	return sb.String()
+	return "any"
 }
