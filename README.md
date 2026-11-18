@@ -1,5 +1,6 @@
 ![GitHub Repo stars](https://img.shields.io/github/stars/PhiFever/AfdianToMarkdown)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/PhiFever/AfdianToMarkdown/total)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPhiFever%2FAfdianToMarkdown.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FPhiFever%2FAfdianToMarkdown?ref=badge_shield)
 ## AfdianToMarkdown
 
 爱发电(afdian.com)爬虫，用于下载爱发电作者的动态、作品集和电铺商品并保存为markdown文件
@@ -291,3 +292,7 @@ cron 更新任务示例（每天凌晨 3 点更新，然后重启服务）：
 
 #### v0.2
 由于主站(afdian.net)在7月15日被屏蔽，添加了对于手动更改临时域名(如afdian.com)的支持
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPhiFever%2FAfdianToMarkdown.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FPhiFever%2FAfdianToMarkdown?ref=badge_large)
