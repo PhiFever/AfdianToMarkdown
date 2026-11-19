@@ -3,6 +3,7 @@
 *.test
 *.out
 vendor/
+AfdianToMarkdown
 
 # 系统文件
 .DS_Store
@@ -13,6 +14,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+.claude/
+.codex/
 
 # 环境和数据
 .env*
@@ -27,3 +30,4 @@ cookies.json
 *.zip
 *.json
 *.log
+
